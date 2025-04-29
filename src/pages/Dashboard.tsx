@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,11 +14,15 @@ import UserProfile from '@/components/dashboard/UserProfile';
 import { OrderStatus } from '@/types/checkout';
 
 const Dashboard = () => {
+  const PAGE_SIZE = 5;
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [page, setPage] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
   
   useEffect(() => {
     const checkSession = async () => {
@@ -31,7 +34,10 @@ const Dashboard = () => {
       }
       
       setUser(session.user);
-      fetchOrders(session.user.id);
+      if (user) {
+        fetchOrders(user.id, page);
+      }
+      
     };
     
     checkSession();
@@ -62,9 +68,12 @@ const Dashboard = () => {
       authListener.subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [navigate, user?.id]);
+  }, [navigate, user?.id, page]);
   
-  const fetchOrders = async (userId: string) => {
+  const fetchOrders = async (userId: string, pageNumber = 0) => {
+    const from = pageNumber * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
     try {
       setLoading(true);
       
@@ -75,7 +84,8 @@ const Dashboard = () => {
           items:order_items(*, products:product_id(name, image_url))
         `)
         .eq('customer_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
       
       if (error) {
         throw error;
@@ -176,6 +186,21 @@ const Dashboard = () => {
                     )}
                   </>
                 )}
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Button
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    Попередня
+                  </Button>
+                  <span className="text-sm" >Сторінка {page + 1}</span>
+                  <Button
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={orders.length < PAGE_SIZE}
+                  >
+                    Наступна
+                  </Button>
+                </div>
               </TabsContent>
               
               <TabsContent value="profile">

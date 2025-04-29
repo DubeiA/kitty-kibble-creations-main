@@ -10,16 +10,22 @@ import { Order, OrderStatus } from '@/types/checkout';
 // import { AdminLogin } from '@/components/admin/AdminLogin';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { OrderList } from '@/components/admin/OrderList';
+import { Button } from '@/components/ui/button';
 
 const Admin = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const PAGE_SIZE = 5;
+
+
+  // const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [page, setPage] = useState(0); // <--- Додаємо стейт для сторінки
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(page);
     
 
     // Subscribe to order changes
@@ -36,7 +42,7 @@ const Admin = () => {
     return () => {
       supabase.removeChannel(orderChanges);
     };
-  }, []);
+  }, [page]);
 
   const handleDeleteOrder = async (orderId: string) => {
   if (!window.confirm("Ви впевнені, що хочете видалити це замовлення?")) return;
@@ -54,14 +60,18 @@ await supabase
 fetchOrders(); // Оновити список після видалення
 };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageNumber = 0) => {
     try {
       setLoading(true);
+
+      const from = pageNumber * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*, items:order_items(*, products:product_id(name))')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }).range(from, to);
       
       if (ordersError) throw ordersError;
       
@@ -176,7 +186,22 @@ fetchOrders(); // Оновити список після видалення
                 loading={loading}
                 onUpdateStatus={updateOrderStatus}
                 />
-              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-4">
+        <Button className='ml-2'
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+        >
+          Попередня
+        </Button>
+        <span className="text-sm">Сторінка {page + 1}</span>
+        <Button className='mr-2'
+          onClick={() => setPage((p) => p + 1)}
+          disabled={orders.length < PAGE_SIZE}
+        >
+          Наступна 
+        </Button> 
+      </div>
             )
           </CardContent>
         </Card>

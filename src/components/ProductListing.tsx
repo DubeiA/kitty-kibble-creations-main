@@ -7,15 +7,35 @@ import { useProducts, ProductCategory, AnimalType } from '@/hooks/useProducts';
 // Types for product filters
 type ProductFilterType = 'all' | 'kitten' | 'adult' | 'senior' | 'grain-free' | 'sensitive' | 'high-protein';
 
-const filters: { id: ProductFilterType, name: string }[] = [
-  { id: 'all', name: 'All Products' },
-  { id: 'kitten', name: 'Kitten' },
-  { id: 'adult', name: 'Adult' },
-  { id: 'senior', name: 'Senior' },
-  { id: 'grain-free', name: 'Grain-Free' },
-  { id: 'sensitive', name: 'Sensitive Tummy' },
-  { id: 'high-protein', name: 'High Protein' },
-];
+const CATEGORY_LABELS = {
+  cat: {
+    all: "All Cat Food",
+    kitten: "Kitten",
+    adult: "Adult Cat",
+    senior: "Senior Cat",
+    "grain-free": "Grain-Free",
+    sensitive: "Sensitive Digestion",
+    "high-protein": "High-Protein Formula",
+  },
+  dog: {
+    all: "All Dog Food",
+    kitten: "Puppy",
+    adult: "Adult Dog",
+    senior: "Senior Dog",
+    "grain-free": "Grain-Free",
+    sensitive: "Sensitive Stomach",
+    "high-protein": "High-Protein Formula",
+  },
+  fish: {
+    all: "All Fish Food",
+    kitten: "Fry",
+    adult: "Adult Fish",
+    senior: "Mature Fish",
+    "grain-free": "Grain-Free (Low-Filler)",
+    sensitive: "For Sensitive Species",
+    "high-protein": "High-Protein Feed",
+  },
+};
 
 const categoryTitles = {
   all: 'All Pet Food Products',
@@ -160,17 +180,17 @@ const ProductListing = () => {
         
         {/* Filters */}
         <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-12">
-          {filters.map(filter => (
+          {Object.entries(CATEGORY_LABELS[selectedCategory as keyof typeof CATEGORY_LABELS] || CATEGORY_LABELS.cat).map(([id, name]) => (
             <button
-              key={filter.id}
-              onClick={() => setActiveFilter(filter.id)}
+              key={id}
+              onClick={() => setActiveFilter(id as ProductFilterType)}
               className={`px-4 py-2 rounded-full transition-all duration-300 text-sm md:text-base ${
-                activeFilter === filter.id
+                activeFilter === id as ProductFilterType
                   ? 'bg-kitty-blue text-primary-foreground'
                   : 'bg-white hover:bg-neutral-200'
               }`}
             >
-              {filter.name}
+              {name}
             </button>
           ))}
         </div>
