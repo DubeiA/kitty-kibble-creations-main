@@ -1,0 +1,166 @@
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Menu, X, ShoppingCart } from 'lucide-react';
+import AuthButtons from './AuthButtons';
+import { useCurrentUser } from '@/hooks/currentUser';
+
+
+
+
+// Get cart from localStorage
+const getCartFromStorage = () => {
+  const savedCart = localStorage.getItem('cart');
+  return savedCart ? JSON.parse(savedCart) : [];
+};
+
+
+const Header = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+  const location = useLocation();
+  const isShopPage = location.pathname === '/shop';
+  const { user } = useCurrentUser();
+
+  // Update cart count when component mounts and when location changes
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cartItems = getCartFromStorage();
+      const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+      setCartItemsCount(itemCount);
+    };
+
+    // Initial update
+    updateCartCount();
+
+    // Setup event listener for storage changes
+    window.addEventListener('storage', updateCartCount);
+
+    // Custom event for cart updates
+    const handleCartUpdate = () => updateCartCount();
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, [location]);
+
+  // Scroll to top when navigating
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  return (
+    <header className="py-4 px-4 md:px-8 sticky top-0 bg-white/90 backdrop-blur-sm z-50 shadow-sm">
+      <div className="container mx-auto flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="bg-kitty-pink p-2 rounded-full">
+            <img 
+              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+              alt="Kitty Kibble Creations Logo"
+              className="w-6 h-6 object-cover rounded-full"
+            />
+          </div>
+          <span className="font-display font-bold text-xl md:text-2xl">Kitty Kibble Creations</span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          <Link 
+            to="/shop" 
+            className={`font-medium transition-colors relative ${
+              isShopPage 
+                ? 'text-primary-foreground' 
+                : 'hover:text-primary-foreground'
+            } ${
+              isShopPage 
+                ? 'after:content-[""] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-kitty-pink'
+                : ''
+            }`}
+          >
+            Shop
+          </Link>
+          <a href="#why-our-food" className="font-medium hover:text-primary-foreground transition-colors">Why Our Food?</a>
+          <a href="#reviews" className="font-medium hover:text-primary-foreground transition-colors">Reviews</a>
+          <a href="#faq" className="font-medium hover:text-primary-foreground transition-colors">FAQ</a>
+          <a href="#contact" className="font-medium hover:text-primary-foreground transition-colors">Contact</a>
+        </nav>
+
+        {/* Cart, Auth & CTA Button */}
+        <div className="hidden md:flex items-center gap-4">
+          { user &&  <Link to="/cart" className="relative">
+            <Button variant="ghost" size="icon">
+              <ShoppingCart size={24} />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground w-5 h-5 rounded-full text-xs flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Button>
+          </Link>}
+          <AuthButtons />
+          <Link to="/shop" className="btn-primary">
+            Shop Now
+            <img 
+              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+              alt="Cat food"
+              className="w-5 h-5 object-cover rounded-full"
+            />
+          </Link>
+        </div>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden flex items-center gap-4">
+          <Link to="/cart" className="relative">
+            <Button variant="ghost" size="icon">
+              <ShoppingCart size={24} />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground w-5 h-5 rounded-full text-xs flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Button>
+          </Link>
+          <button 
+            className="text-foreground"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+      
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md p-4 flex flex-col gap-4">
+          <Link 
+            to="/shop" 
+            className={`font-medium p-2 hover:bg-neutral-100 rounded-md ${
+              isShopPage ? 'bg-kitty-pink/10 text-primary-foreground' : ''
+            }`}
+          >
+            Shop
+          </Link>
+          <a href="#why-our-food" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Why Our Food?</a>
+          <a href="#reviews" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Reviews</a>
+          <a href="#faq" className="font-medium p-2 hover:bg-neutral-100 rounded-md">FAQ</a>
+          <a href="#contact" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Contact</a>
+          <AuthButtons />
+          <Link to="/shop" className="btn-primary mt-2">
+            Shop Now
+            <img 
+              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+              alt="Cat food"
+              className="w-5 h-5 object-cover rounded-full"
+            />
+          </Link>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default Header;
