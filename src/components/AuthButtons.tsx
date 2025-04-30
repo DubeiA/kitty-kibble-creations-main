@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, User, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const AuthButtons = () => {
   const [user, setUser] = useState(null);
+    const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user || null));
@@ -46,7 +48,7 @@ const AuthButtons = () => {
           onClick={async () => {
             await supabase.auth.signOut();
             localStorage.removeItem('cart'); 
-            window.location.href = "/auth";
+           navigate('/auth')
           }}
         >
           Вийти
@@ -68,7 +70,7 @@ const AuthButtons = () => {
         className="btn-secondary"
         onClick={async () => {
           await supabase.auth.signOut();
-          window.location.href = "/auth";
+          navigate('/auth')
         }}
       >
         Вийти

@@ -1,19 +1,20 @@
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import ProtectedRoute from './components/admin/AdminLogin';
+import { lazy, Suspense } from 'react';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Shop from "./pages/Shop";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import Admin from "./pages/Admin";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/admin/AdminLogin";
+const IndexPage = lazy(() => import('./pages/Index'));
+const ShopPage = lazy(() => import('./pages/Shop'));
+const CartPage = lazy(() => import('./pages/Cart'));
+const CheckoutPage = lazy(() => import('./pages/Checkout'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccess'));
+const AdminPage = lazy(() => import('./pages/Admin'));
+const AuthPage = lazy(() => import('./pages/Auth'));
+const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const NotFoundPage = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
 
@@ -22,23 +23,33 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <Suspense fallback={<div>Завантаження...</div>}>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/admin" element={<ProtectedRoute onlyAdmin={true}>
-      <Admin />
-    </ProtectedRoute>} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/" element={<IndexPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="payment-success" element={<PaymentSuccessPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute onlyAdmin={true}>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
-      </BrowserRouter>
+      </Suspense>
     </TooltipProvider>
   </QueryClientProvider>
 );

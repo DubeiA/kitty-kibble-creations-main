@@ -4,7 +4,9 @@ import { useCurrentUser } from "@/hooks/currentUser";
 export function ProtectedRoute({ children, onlyAdmin = false }) {
   const { user, loading } = useCurrentUser();
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+  const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+  
+
 
   if (loading) return <div>Завантаження...</div>;
 

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL; // або список email-ів адміністраторів
+  
 
 const Auth = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);

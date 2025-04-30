@@ -17,6 +17,7 @@ export type Database = {
           name: string | null
           phone: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -25,6 +26,7 @@ export type Database = {
           name?: string | null
           phone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -33,6 +35,7 @@ export type Database = {
           name?: string | null
           phone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -133,6 +136,7 @@ export type Database = {
           image_url: string | null
           in_stock: boolean | null
           is_favorite: boolean | null
+          life_stage: string | null
           name: string
           price: number
           updated_at: string
@@ -146,6 +150,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean | null
           is_favorite?: boolean | null
+          life_stage?: string | null
           name: string
           price: number
           updated_at?: string
@@ -159,6 +164,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean | null
           is_favorite?: boolean | null
+          life_stage?: string | null
           name?: string
           price?: number
           updated_at?: string
@@ -174,7 +180,15 @@ export type Database = {
     }
     Enums: {
       animal_type: "cat" | "dog" | "fish"
-      product_category: "dry" | "wet" | "treats" | "subscription"
+      product_category:
+        | "dry"
+        | "wet"
+        | "treats"
+        | "subscription"
+        | "grain-free"
+        | "senior"
+        | "high-protein"
+        | "sensitive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -291,7 +305,16 @@ export const Constants = {
   public: {
     Enums: {
       animal_type: ["cat", "dog", "fish"],
-      product_category: ["dry", "wet", "treats", "subscription"],
+      product_category: [
+        "dry",
+        "wet",
+        "treats",
+        "subscription",
+        "grain-free",
+        "senior",
+        "high-protein",
+        "sensitive",
+      ],
     },
   },
 } as const

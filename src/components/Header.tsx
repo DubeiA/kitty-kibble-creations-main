@@ -4,16 +4,13 @@ import { Button } from './ui/button';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import AuthButtons from './AuthButtons';
 import { useCurrentUser } from '@/hooks/currentUser';
-
-
-
+import { useScrollToSection } from '@/hooks/useScrollToSection';
 
 // Get cart from localStorage
 const getCartFromStorage = () => {
   const savedCart = localStorage.getItem('cart');
   return savedCart ? JSON.parse(savedCart) : [];
 };
-
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,11 +19,16 @@ const Header = () => {
   const isShopPage = location.pathname === '/shop';
   const { user } = useCurrentUser();
 
+  const scrollToSection = useScrollToSection();
+
   // Update cart count when component mounts and when location changes
   useEffect(() => {
     const updateCartCount = () => {
       const cartItems = getCartFromStorage();
-      const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+      const itemCount = cartItems.reduce(
+        (total, item) => total + item.quantity,
+        0
+      );
       setCartItemsCount(itemCount);
     };
 
@@ -56,40 +58,62 @@ const Header = () => {
       <div className="container mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="bg-kitty-pink p-2 rounded-full">
-            <img 
-              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+            <img
+              src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Kitty Kibble Creations Logo"
               className="w-6 h-6 object-cover rounded-full"
             />
           </div>
-          <span className="font-display font-bold text-xl md:text-2xl">Kitty Kibble Creations</span>
+          <span className="font-display font-bold text-xl md:text-2xl">
+            Kitty Kibble Creations
+          </span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link 
-            to="/shop" 
+          <Link
+            to="/shop"
             className={`font-medium transition-colors relative ${
-              isShopPage 
-                ? 'text-primary-foreground' 
+              isShopPage
+                ? 'text-primary-foreground'
                 : 'hover:text-primary-foreground'
             } ${
-              isShopPage 
+              isShopPage
                 ? 'after:content-[""] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-kitty-pink'
                 : ''
             }`}
           >
             Shop
           </Link>
-          <a href="#why-our-food" className="font-medium hover:text-primary-foreground transition-colors">Why Our Food?</a>
-          <a href="#reviews" className="font-medium hover:text-primary-foreground transition-colors">Reviews</a>
-          <a href="#faq" className="font-medium hover:text-primary-foreground transition-colors">FAQ</a>
-          <a href="#contact" className="font-medium hover:text-primary-foreground transition-colors">Contact</a>
+          <button
+            className="font-medium hover:text-primary-foreground transition-colors bg-transparent border-none"
+            onClick={() => scrollToSection('why-our-food')}
+          >
+            Why Our Food?
+          </button>
+          <button
+            className="font-medium hover:text-primary-foreground transition-colors bg-transparent border-none"
+            onClick={() => scrollToSection('reviews')}
+          >
+            Reviews
+          </button>
+          <button
+            className="font-medium hover:text-primary-foreground transition-colors"
+            onClick={() => scrollToSection('faq')}
+          >
+            FAQ
+          </button>
+          <button
+            className="font-medium hover:text-primary-foreground transition-colors"
+            onClick={() => scrollToSection('contact')}
+          >
+            Contact
+          </button>
         </nav>
 
         {/* Cart, Auth & CTA Button */}
         <div className="hidden md:flex items-center gap-4">
-          { user &&  <Link to="/cart" className="relative">
+          <Link to="/cart" className="relative">
             <Button variant="ghost" size="icon">
               <ShoppingCart size={24} />
               {cartItemsCount > 0 && (
@@ -98,12 +122,12 @@ const Header = () => {
                 </span>
               )}
             </Button>
-          </Link>}
+          </Link>
           <AuthButtons />
           <Link to="/shop" className="btn-primary">
             Shop Now
-            <img 
-              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+            <img
+              src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Cat food"
               className="w-5 h-5 object-cover rounded-full"
             />
@@ -122,37 +146,55 @@ const Header = () => {
               )}
             </Button>
           </Link>
-          <button 
+          <button
             className="text-foreground"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-
-      
       </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md p-4 flex flex-col gap-4">
-          <Link 
-            to="/shop" 
+          <Link
+            to="/shop"
             className={`font-medium p-2 hover:bg-neutral-100 rounded-md ${
               isShopPage ? 'bg-kitty-pink/10 text-primary-foreground' : ''
             }`}
           >
             Shop
           </Link>
-          <a href="#why-our-food" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Why Our Food?</a>
-          <a href="#reviews" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Reviews</a>
-          <a href="#faq" className="font-medium p-2 hover:bg-neutral-100 rounded-md">FAQ</a>
-          <a href="#contact" className="font-medium p-2 hover:bg-neutral-100 rounded-md">Contact</a>
+          <a
+            href="/#/why-our-food"
+            className="font-medium p-2 hover:bg-neutral-100 rounded-md"
+          >
+            Why Our Food?
+          </a>
+          <a
+            href="/#/reviews"
+            className="font-medium p-2 hover:bg-neutral-100 rounded-md"
+          >
+            Reviews
+          </a>
+          <a
+            href="/#/faq"
+            className="font-medium p-2 hover:bg-neutral-100 rounded-md"
+          >
+            FAQ
+          </a>
+          <a
+            href="/#/contact"
+            className="font-medium p-2 hover:bg-neutral-100 rounded-md"
+          >
+            Contact
+          </a>
           <AuthButtons />
           <Link to="/shop" className="btn-primary mt-2">
             Shop Now
-            <img 
-              src="/lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png"
+            <img
+              src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Cat food"
               className="w-5 h-5 object-cover rounded-full"
             />

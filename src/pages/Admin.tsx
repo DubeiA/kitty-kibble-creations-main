@@ -1,10 +1,15 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '../components/Header';
 import NewsletterAndFooter from '../components/NewsletterAndFooter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Order, OrderStatus } from '@/types/checkout';
 // import { AdminLogin } from '@/components/admin/AdminLogin';
@@ -13,9 +18,7 @@ import { OrderList } from '@/components/admin/OrderList';
 import { Button } from '@/components/ui/button';
 
 const Admin = () => {
-
   const PAGE_SIZE = 5;
-
 
   // const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -26,17 +29,18 @@ const Admin = () => {
 
   useEffect(() => {
     fetchOrders(page);
-    
 
     // Subscribe to order changes
     const orderChanges = supabase
       .channel('public:orders')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'orders' }, 
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
         () => {
           console.log('Order changes detected, refreshing orders list');
           fetchOrders();
-        })
+        }
+      )
       .subscribe();
 
     return () => {
@@ -45,20 +49,15 @@ const Admin = () => {
   }, [page]);
 
   const handleDeleteOrder = async (orderId: string) => {
-  if (!window.confirm("Ви впевнені, що хочете видалити це замовлення?")) return;
-  // 1. Видалити order_items
-await supabase
-  .from('order_items')
-  .delete()
-  .eq('order_id', orderId);
+    if (!window.confirm('Ви впевнені, що хочете видалити це замовлення?'))
+      return;
+    // 1. Видалити order_items
+    await supabase.from('order_items').delete().eq('order_id', orderId);
 
-// 2. Видалити замовлення
-await supabase
-  .from('orders')
-  .delete()
-  .eq('id', orderId);
-fetchOrders(); // Оновити список після видалення
-};
+    // 2. Видалити замовлення
+    await supabase.from('orders').delete().eq('id', orderId);
+    fetchOrders(); // Оновити список після видалення
+  };
 
   const fetchOrders = async (pageNumber = 0) => {
     try {
@@ -67,33 +66,34 @@ fetchOrders(); // Оновити список після видалення
       const from = pageNumber * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*, items:order_items(*, products:product_id(name))')
-        .order('created_at', { ascending: false }).range(from, to);
-      
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
       if (ordersError) throw ordersError;
-      
+
       // Process the data and ensure it conforms to the Order type
-      const processedOrders: Order[] = ordersData?.map(order => ({
-        ...order,
-        // Explicitly cast string status to OrderStatus type
-        status: order.status as OrderStatus,
-        items: order.items?.map((item: any) => ({
-          ...item,
-          product_name: item.products?.name || 'Невідомий товар',
-          total_price: item.quantity * item.price_at_time
-        }))
-      })) || [];
+      const processedOrders: Order[] =
+        ordersData?.map(order => ({
+          ...order,
+          // Explicitly cast string status to OrderStatus type
+          status: order.status as OrderStatus,
+          items: order.items?.map((item: any) => ({
+            ...item,
+            product_name: item.products?.name || 'Невідомий товар',
+            total_price: item.quantity * item.price_at_time,
+          })),
+        })) || [];
 
       setOrders(processedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
-        title: "Помилка",
-        description: "Не вдалося завантажити замовлення",
-        variant: "destructive",
+        title: 'Помилка',
+        description: 'Не вдалося завантажити замовлення',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -102,11 +102,11 @@ fetchOrders(); // Оновити список після видалення
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('auth')
+    navigate('/auth');
     localStorage.removeItem('cart');
     toast({
-      title: "Вихід виконано",
-      description: "Ви вийшли з панелі адміністратора",
+      title: 'Вихід виконано',
+      description: 'Ви вийшли з панелі адміністратора',
     });
   };
 
@@ -115,50 +115,61 @@ fetchOrders(); // Оновити список після видалення
       // First update the database
       const { error } = await supabase
         .from('orders')
-        .update({ 
+        .update({
           status: newStatus,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', orderId);
-      
+
       if (error) throw error;
-      
+
       // Update the local state immediately for a responsive UI
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId 
-            ? { ...order, status: newStatus, updated_at: new Date().toISOString() } 
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId
+            ? {
+                ...order,
+                status: newStatus,
+                updated_at: new Date().toISOString(),
+              }
             : order
         )
       );
-      
+
       toast({
-        title: "Статус оновлено",
+        title: 'Статус оновлено',
         description: `Замовлення оновлено до статусу "${getStatusLabel(newStatus)}"`,
       });
-      
+
       // Re-fetch orders from database to ensure we have the latest data
       fetchOrders();
     } catch (error) {
       console.error('Error updating order status:', error);
       toast({
-        title: "Помилка",
-        description: "Не вдалося оновити статус замовлення",
-        variant: "destructive",
+        title: 'Помилка',
+        description: 'Не вдалося оновити статус замовлення',
+        variant: 'destructive',
       });
     }
   };
-  
+
   // Helper function to get status labels for toast messages
   const getStatusLabel = (status: OrderStatus): string => {
-    switch(status) {
-      case 'pending': return 'Очікує обробки';
-      case 'processing': return 'В обробці';
-      case 'awaiting_shipment': return 'Очікує відправлення';
-      case 'shipped': return 'Відправлено';
-      case 'delivered': return 'Доставлено';
-      case 'cancelled': return 'Скасовано';
-      default: return 'Невідомо';
+    switch (status) {
+      case 'pending':
+        return 'Очікує обробки';
+      case 'processing':
+        return 'В обробці';
+      case 'awaiting_shipment':
+        return 'Очікує відправлення';
+      case 'shipped':
+        return 'Відправлено';
+      case 'delivered':
+        return 'Доставлено';
+      case 'cancelled':
+        return 'Скасовано';
+      default:
+        return 'Невідомо';
     }
   };
 
@@ -168,40 +179,41 @@ fetchOrders(); // Оновити список після видалення
       <main className="flex-grow container mx-auto px-4 py-8">
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-2xl font-display">Панель адміністратора</CardTitle>
+            <CardTitle className="text-2xl font-display">
+              Панель адміністратора
+            </CardTitle>
             <CardDescription>
               Керуйте замовленнями та перевіряйте їх статуси
             </CardDescription>
           </CardHeader>
           <CardContent>
-             (
-              <div className="space-y-6">
-                <AdminHeader 
-                  onRefresh={fetchOrders}
-                  onLogout={handleLogout}
-                />
-              <OrderList 
+            (
+            <div className="space-y-6">
+              <AdminHeader onRefresh={fetchOrders} onLogout={handleLogout} />
+              <OrderList
                 handleDeleteOrder={handleDeleteOrder}
                 orders={orders}
                 loading={loading}
                 onUpdateStatus={updateOrderStatus}
-                />
+              />
             </div>
             <div className="flex items-center justify-center gap-2 mt-4">
-        <Button className='ml-2'
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-        >
-          Попередня
-        </Button>
-        <span className="text-sm">Сторінка {page + 1}</span>
-        <Button className='mr-2'
-          onClick={() => setPage((p) => p + 1)}
-          disabled={orders.length < PAGE_SIZE}
-        >
-          Наступна 
-        </Button> 
-      </div>
+              <Button
+                className="ml-2"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                Попередня
+              </Button>
+              <span className="text-sm">Сторінка {page + 1}</span>
+              <Button
+                className="mr-2"
+                onClick={() => setPage(p => p + 1)}
+                disabled={orders.length < PAGE_SIZE}
+              >
+                Наступна
+              </Button>
+            </div>
             )
           </CardContent>
         </Card>
