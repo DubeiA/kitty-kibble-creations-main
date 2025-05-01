@@ -9,14 +9,16 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const AuthButtons = () => {
   const [user, setUser] = useState(null);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user || null));
     // (опціонально) підписка на зміни сесії
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
     return () => {
       listener?.subscription.unsubscribe();
     };
@@ -38,7 +40,11 @@ const AuthButtons = () => {
     return (
       <div className="flex items-center gap-2">
         <Link to="/admin">
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
             <ShieldCheck size={16} />
             Адмінка
           </Button>
@@ -47,8 +53,8 @@ const AuthButtons = () => {
           className="btn-secondary"
           onClick={async () => {
             await supabase.auth.signOut();
-            localStorage.removeItem('cart'); 
-           navigate('/auth')
+            localStorage.removeItem('cart');
+            navigate('/auth');
           }}
         >
           Вийти
@@ -70,7 +76,8 @@ const AuthButtons = () => {
         className="btn-secondary"
         onClick={async () => {
           await supabase.auth.signOut();
-          navigate('/auth')
+          navigate('/auth');
+          localStorage.removeItem('cart');
         }}
       >
         Вийти

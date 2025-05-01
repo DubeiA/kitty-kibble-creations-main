@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Check, Heart, LeafyGreen, PawPrint, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { useProducts, ProductCategory, AnimalType } from '@/hooks/useProducts';
+import ProductCard from './ProductCard';
 
 // Types for product filters
 type ProductFilterType =
@@ -99,8 +100,6 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
 
   const selectedCategory = searchParams.get('category') || 'all';
 
-  // console.log(products);
-
   const {
     data: fetchedProducts = { data: [], count: 0 },
     isLoading,
@@ -190,6 +189,20 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
     });
   };
 
+  const productCards = useMemo(
+    () =>
+      filteredProducts.map(product => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          imageError={!!imageErrors[product.id]}
+          onImageError={() => handleImageError(product.id, product.animal_type)}
+          onAddToCart={handleAddToCart}
+        />
+      )),
+    [filteredProducts, imageErrors]
+  );
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -238,70 +251,7 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
         {/* Products Grid */}
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="product-card group">
-                <div className="relative overflow-hidden">
-                  <img
-                    src={
-                      imageErrors[product.id]
-                        ? getFallbackImage(product.animal_type)
-                        : product.image_url ||
-                          getFallbackImage(product.animal_type)
-                    }
-                    alt={product.name}
-                    className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={() =>
-                      handleImageError(product.id, product.animal_type)
-                    }
-                  />
-                  {product.is_favorite && (
-                    <div className="absolute top-3 right-3 bg-white rounded-full p-1.5 shadow-sm">
-                      <Heart size={16} className="text-red-500 fill-current" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-5 bg-white">
-                  <div className="flex gap-2 mb-2">
-                    {product.category === 'dry' && (
-                      <span className="cat-badge bg-kitty-yellow/30 text-amber-700">
-                        <LeafyGreen size={14} />
-                        Суха їжа
-                      </span>
-                    )}
-                    {product.in_stock && (
-                      <span className="cat-badge bg-kitty-green/30 text-green-700">
-                        <Check size={14} />В наявності
-                      </span>
-                    )}
-                    {product.category === 'wet' && (
-                      <span className="cat-badge bg-kitty-blue/30 text-blue-700">
-                        <PawPrint size={14} />
-                        Волога їжа
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="font-display font-semibold text-xl mb-2">
-                    {product.name}
-                  </h3>
-                  <p className="text-neutral-600 mb-3">{product.description}</p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-lg">
-                      ${product.price.toFixed(2)}
-                    </span>
-                    <button
-                      className="btn-primary py-2"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Додати в кошик
-                      <ShoppingCart size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {productCards}
           </div>
         ) : (
           <div className="text-center py-12">

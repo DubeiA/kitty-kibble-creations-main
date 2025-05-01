@@ -59,6 +59,7 @@ const Header = () => {
         <Link to="/" className="flex items-center gap-2">
           <div className="bg-kitty-pink p-2 rounded-full">
             <img
+              loading="lazy"
               src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Kitty Kibble Creations Logo"
               className="w-6 h-6 object-cover rounded-full"
@@ -127,6 +128,7 @@ const Header = () => {
           <Link to="/shop" className="btn-primary">
             Shop Now
             <img
+              loading="lazy"
               src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Cat food"
               className="w-5 h-5 object-cover rounded-full"
@@ -194,6 +196,7 @@ const Header = () => {
           <Link to="/shop" className="btn-primary mt-2">
             Shop Now
             <img
+              loading="lazy"
               src={`${import.meta.env.BASE_URL}lovable-uploads/460ac5b8-846f-4b20-aef4-7961c51b26f1.png`}
               alt="Cat food"
               className="w-5 h-5 object-cover rounded-full"

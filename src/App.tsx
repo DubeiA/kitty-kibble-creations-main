@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/admin/AdminLogin';
 import { lazy, Suspense } from 'react';
+import { useSupabaseAuthCallback } from '@/hooks/useSupabaseAuthCallback';
 
 const IndexPage = lazy(() => import('./pages/Index'));
 const ShopPage = lazy(() => import('./pages/Shop'));
@@ -18,40 +19,44 @@ const NotFoundPage = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Suspense fallback={<div>Завантаження...</div>}>
-        <Routes>
-          <Route path="/" element={<IndexPage />} />
-          <Route path="/shop" element={<ShopPage />} />
-          <Route path="cart" element={<CartPage />} />
-          <Route path="checkout" element={<CheckoutPage />} />
-          <Route path="payment-success" element={<PaymentSuccessPage />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute onlyAdmin={true}>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useSupabaseAuthCallback();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Suspense fallback={<div>Завантаження...</div>}>
+          <Routes>
+            <Route path="/" element={<IndexPage />} />
+            <Route path="/shop" element={<ShopPage />} />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="payment-success" element={<PaymentSuccessPage />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute onlyAdmin={true}>
+                  <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -4,35 +4,52 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '../components/Header';
 import NewsletterAndFooter from '../components/NewsletterAndFooter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginFormValues, RegisterFormValues, loginSchema, registerSchema } from '@/schemas/checkoutSchema';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  LoginFormValues,
+  RegisterFormValues,
+  loginSchema,
+  registerSchema,
+} from '@/schemas/checkoutSchema';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL; // або список email-ів адміністраторів
-  
 
 const Auth = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [emailConfirmationNeeded, setEmailConfirmationNeeded] = useState(false);
-  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
-    }
+    },
   });
-  
+
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -40,37 +57,37 @@ const Auth = () => {
       email: '',
       password: '',
       confirmPassword: '',
-    }
+    },
   });
-  
- const handleLogin = async (data: LoginFormValues) => {
-  setIsLoggingIn(true);
 
-  try {
-    const { data: loginData, error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-     localStorage.removeItem('cart'); // Очищення кошика при вході
+  const handleLogin = async (data: LoginFormValues) => {
+    setIsLoggingIn(true);
 
-    if (error) {
-      throw error;
-    }
+    try {
+      const { data: loginData, error } = await supabase.auth.signInWithPassword(
+        {
+          email: data.email,
+          password: data.password,
+        }
+      );
+      localStorage.removeItem('cart'); // Очищення кошика при вході
 
-    // Перевіряємо, чи є запис у customers
-    const user = loginData.user;
-    if (user) {
-      const { data: customer, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      if (error) {
+        throw error;
+      }
 
-      if (customerError && customerError.code === 'PGRST116') {
-        // Якщо запису немає — створюємо
-        await supabase
+      // Перевіряємо, чи є запис у customers
+      const user = loginData.user;
+      if (user) {
+        const { data: customer, error: customerError } = await supabase
           .from('customers')
-          .insert({
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (customerError && customerError.code === 'PGRST116') {
+          // Якщо запису немає — створюємо
+          await supabase.from('customers').insert({
             id: user.id,
             email: user.email,
             name: user.user_metadata?.name || '',
@@ -78,114 +95,142 @@ const Auth = () => {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
+        }
       }
-    }
 
-    toast({
-      title: "Успішний вхід",
-      description: "Ви успішно увійшли в аккаунт",
-    });
+      toast({
+        title: 'Успішний вхід',
+        description: 'Ви успішно увійшли в аккаунт',
+      });
 
-    if (user.email === ADMIN_EMAIL) {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
+      if (user.email === ADMIN_EMAIL) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      // ... існуюча обробка помилок ...
+    } finally {
+      setIsLoggingIn(false);
     }
-  } catch (error: any) {
-    // ... існуюча обробка помилок ...
-  } finally {
-    setIsLoggingIn(false);
-  }
-};
-  
+  };
+
   const handleRegister = async (data: RegisterFormValues) => {
     setIsRegistering(true);
-    
+
     try {
       // Додаємо перевірку на обмеження домену
       const emailDomain = data.email.split('@')[1];
-      if (!emailDomain || !['gmail.com', 'ukr.net', 'yahoo.com', 'outlook.com', 'hotmail.com', 'i.ua', 'protonmail.com'].includes(emailDomain)) {
-        throw new Error("unsupported_email_domain");
+      if (
+        !emailDomain ||
+        ![
+          'gmail.com',
+          'ukr.net',
+          'yahoo.com',
+          'outlook.com',
+          'hotmail.com',
+          'i.ua',
+          'protonmail.com',
+        ].includes(emailDomain)
+      ) {
+        throw new Error('unsupported_email_domain');
       }
-      
+
       const { error, data: signUpData } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             name: data.name,
-          }
-        }
+          },
+        },
       });
-      
+
       if (error) {
         throw error;
       }
 
       if (signUpData?.user) {
-  await supabase
-    .from('customers')
-    .insert({
-      id: signUpData.user.id, // id з auth
-      email: data.email,
-      name: data.name,
-      phone: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-}
-      
+        await supabase.from('customers').insert({
+          id: signUpData.user.id, // id з auth
+          email: data.email,
+          name: data.name,
+          phone: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+
       setEmailConfirmationNeeded(true);
       setConfirmationEmail(data.email);
-      
+
       toast({
-        title: "Реєстрацію майже завершено",
-        description: "Перевірте вашу пошту і підтвердіть email-адресу щоб завершити реєстрацію.",
+        title: 'Реєстрацію майже завершено',
+        description:
+          'Перевірте вашу пошту і підтвердіть email-адресу щоб завершити реєстрацію.',
       });
     } catch (error: any) {
       console.error(error);
-      
-      let errorMessage = "Не вдалося зареєструвати аккаунт";
-      
-      if (error.message.includes("already registered")) {
-        errorMessage = "Користувач з такою email-адресою вже існує";
-      } else if (error.message.includes("invalid")) {
-        errorMessage = "Невірний формат email-адреси";
-      } else if (error.message.includes("unsupported_email_domain")) {
-        errorMessage = "Використовуйте тільки популярні поштові сервіси: Gmail, Ukr.net, Yahoo, Outlook, Hotmail, i.ua, Protonmail";
+
+      let errorMessage = 'Не вдалося зареєструвати аккаунт';
+
+      if (error.message.includes('already registered')) {
+        errorMessage = 'Користувач з такою email-адресою вже існує';
+      } else if (error.message.includes('invalid')) {
+        errorMessage = 'Невірний формат email-адреси';
+      } else if (error.message.includes('unsupported_email_domain')) {
+        errorMessage =
+          'Використовуйте тільки популярні поштові сервіси: Gmail, Ukr.net, Yahoo, Outlook, Hotmail, i.ua, Protonmail';
       }
-      
+
       toast({
-        title: "Помилка реєстрації",
+        title: 'Помилка реєстрації',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsRegistering(false);
     }
   };
-  
+
   const resendConfirmationEmail = async () => {
     if (!confirmationEmail) return;
-    
+
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: confirmationEmail,
       });
-      
+
       if (error) throw error;
-      
+
       toast({
-        title: "Лист надіслано",
-        description: "Ми надіслали вам новий лист для підтвердження email-адреси.",
+        title: 'Лист надіслано',
+        description:
+          'Ми надіслали вам новий лист для підтвердження email-адреси.',
       });
     } catch (error) {
       console.error(error);
       toast({
-        title: "Помилка",
-        description: "Не вдалося надіслати лист. Спробуйте пізніше.",
-        variant: "destructive",
+        title: 'Помилка',
+        description: 'Не вдалося надіслати лист. Спробуйте пізніше.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://dubeia.github.io/kitty-kibble-creations-main/',
+      },
+    });
+    if (error) {
+      toast({
+        title: 'Помилка Google-авторизації',
+        description: error.message,
+        variant: 'destructive',
       });
     }
   };
@@ -197,7 +242,9 @@ const Auth = () => {
         <div className="max-w-md mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-display">Вхід до аккаунту</CardTitle>
+              <CardTitle className="text-2xl font-display">
+                Вхід до аккаунту
+              </CardTitle>
               <CardDescription>
                 Увійдіть або створіть аккаунт для доступу до замовлень
               </CardDescription>
@@ -210,22 +257,30 @@ const Auth = () => {
                     <div>
                       <h3 className="font-medium">Підтвердіть email-адресу</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Ми надіслали лист підтвердження на адресу <strong>{confirmationEmail}</strong>. Будь ласка, перейдіть за посиланням у листі, щоб активувати аккаунт.
+                        Ми надіслали лист підтвердження на адресу{' '}
+                        <strong>{confirmationEmail}</strong>. Будь ласка,
+                        перейдіть за посиланням у листі, щоб активувати аккаунт.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">Не отримали лист?</p>
-                    <Button onClick={resendConfirmationEmail} variant="outline" size="sm">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Не отримали лист?
+                    </p>
+                    <Button
+                      onClick={resendConfirmationEmail}
+                      variant="outline"
+                      size="sm"
+                    >
                       Надіслати повторно
                     </Button>
                   </div>
-                  
+
                   <div className="pt-2 border-t">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full" 
+                    <Button
+                      variant="ghost"
+                      className="w-full"
                       onClick={() => {
                         setEmailConfirmationNeeded(false);
                         loginForm.reset();
@@ -242,10 +297,13 @@ const Auth = () => {
                     <TabsTrigger value="login">Вхід</TabsTrigger>
                     <TabsTrigger value="register">Реєстрація</TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="login">
                     <Form {...loginForm}>
-                      <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                      <form
+                        onSubmit={loginForm.handleSubmit(handleLogin)}
+                        className="space-y-4"
+                      >
                         <FormField
                           control={loginForm.control}
                           name="email"
@@ -253,13 +311,16 @@ const Auth = () => {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input placeholder="your@email.com" {...field} />
+                                <Input
+                                  placeholder="your@email.com"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={loginForm.control}
                           name="password"
@@ -267,30 +328,54 @@ const Auth = () => {
                             <FormItem>
                               <FormLabel>Пароль</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="Ваш пароль" {...field} />
+                                <Input
+                                  type="password"
+                                  placeholder="Ваш пароль"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
-                        <Button type="submit" className="w-full" disabled={isLoggingIn}>
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isLoggingIn}
+                        >
                           {isLoggingIn ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Вхід...
                             </>
                           ) : (
-                            "Увійти"
+                            'Увійти'
                           )}
                         </Button>
                       </form>
                     </Form>
                   </TabsContent>
-                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-2 mt-2"
+                    onClick={signInWithGoogle}
+                  >
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      alt="Google"
+                      className="w-5 h-5"
+                    />
+                    Увійти через Google
+                  </Button>
+
                   <TabsContent value="register">
                     <Form {...registerForm}>
-                      <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+                      <form
+                        onSubmit={registerForm.handleSubmit(handleRegister)}
+                        className="space-y-4"
+                      >
                         <FormField
                           control={registerForm.control}
                           name="name"
@@ -304,7 +389,7 @@ const Auth = () => {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={registerForm.control}
                           name="email"
@@ -312,16 +397,20 @@ const Auth = () => {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input placeholder="your@email.com" {...field} />
+                                <Input
+                                  placeholder="your@email.com"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                               <p className="text-xs text-muted-foreground mt-1">
-                                Використовуйте Gmail, Ukr.net, Yahoo, Outlook, Hotmail, i.ua або Protonmail
+                                Використовуйте Gmail, Ukr.net, Yahoo, Outlook,
+                                Hotmail, i.ua або Protonmail
                               </p>
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={registerForm.control}
                           name="password"
@@ -329,13 +418,17 @@ const Auth = () => {
                             <FormItem>
                               <FormLabel>Пароль</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="Мінімум 6 символів" {...field} />
+                                <Input
+                                  type="password"
+                                  placeholder="Мінімум 6 символів"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={registerForm.control}
                           name="confirmPassword"
@@ -343,21 +436,29 @@ const Auth = () => {
                             <FormItem>
                               <FormLabel>Підтвердження паролю</FormLabel>
                               <FormControl>
-                                <Input type="password" placeholder="Повторіть пароль" {...field} />
+                                <Input
+                                  type="password"
+                                  placeholder="Повторіть пароль"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
-                        <Button type="submit" className="w-full" disabled={isRegistering}>
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={isRegistering}
+                        >
                           {isRegistering ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Реєстрація...
                             </>
                           ) : (
-                            "Зареєструватися"
+                            'Зареєструватися'
                           )}
                         </Button>
                       </form>

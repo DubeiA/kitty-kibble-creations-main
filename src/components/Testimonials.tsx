@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Heart, Cat } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const testimonials = [
   {
@@ -53,20 +54,22 @@ const testimonials = [
 const Testimonials = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [direction, setDirection] = useState(0); // 1 = next, -1 = prev
 
   const changeTestimonial = useCallback(
     (newIndex: number) => {
       if (isTransitioning) return;
-
+      setDirection(
+        newIndex > activeIndex ||
+          (activeIndex === testimonials.length - 1 && newIndex === 0)
+          ? 1
+          : -1
+      );
       setIsTransitioning(true);
       setActiveIndex(newIndex);
-
-      // Reset transition state after animation
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 500);
+      setTimeout(() => setIsTransitioning(false), 500);
     },
-    [isTransitioning]
+    [isTransitioning, activeIndex]
   );
 
   useEffect(() => {
@@ -75,7 +78,6 @@ const Testimonials = () => {
         changeTestimonial((activeIndex + 1) % testimonials.length);
       }
     }, 5000);
-
     return () => clearInterval(interval);
   }, [activeIndex, isTransitioning, changeTestimonial]);
 
@@ -107,15 +109,18 @@ const Testimonials = () => {
           {/* Desktop Testimonial Display */}
           <div className="hidden md:grid grid-cols-3 gap-6">
             {visibleTestimonials.map((testimonial, idx) => (
-              <div
+              <motion.div
                 key={`${testimonial.id}-${idx}`}
-                className={`bg-white p-6 rounded-2xl shadow-sm transition-all duration-500 ${
-                  idx === 1 ? 'transform scale-110 z-10' : 'opacity-80'
-                }`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: idx === 1 ? 1.1 : 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4 }}
+                className={`bg-white p-6 rounded-2xl shadow-sm transition-all duration-500 ${idx === 1 ? 'z-10' : 'opacity-80'}`}
               >
                 <div className="flex items-center mb-4">
                   <div className="w-14 h-14 rounded-full overflow-hidden mr-3">
                     <img
+                      loading="lazy"
                       src={testimonial.image}
                       alt={testimonial.catName}
                       className="w-full h-full object-cover"
@@ -135,52 +140,55 @@ const Testimonials = () => {
                   <Heart size={16} className="mr-2 fill-current" />
                   <span className="text-sm">Verified Customer</span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Mobile Testimonial Display */}
           <div className="md:hidden">
-            <div
-              className="bg-white p-6 rounded-2xl shadow-sm transition-transform duration-500"
-              style={{
-                transform: isTransitioning ? 'scale(0.95)' : 'scale(1)',
-              }}
-            >
-              <div className="flex items-center mb-4">
-                <div className="w-14 h-14 rounded-full overflow-hidden mr-3">
-                  <img
-                    src={testimonials[activeIndex].image}
-                    alt={testimonials[activeIndex].catName}
-                    className="w-full h-full object-cover"
-                  />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeIndex}
+                initial={{ opacity: 0, y: direction > 0 ? 30 : -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: direction > 0 ? -30 : 30 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white p-6 rounded-2xl shadow-sm"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="w-14 h-14 rounded-full overflow-hidden mr-3">
+                    <img
+                      loading="lazy"
+                      src={testimonials[activeIndex].image}
+                      alt={testimonials[activeIndex].catName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-semibold">
+                      {testimonials[activeIndex].catName}
+                    </h3>
+                    <p className="text-sm text-neutral-500">
+                      & {testimonials[activeIndex].ownerName}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-display font-semibold">
-                    {testimonials[activeIndex].catName}
-                  </h3>
-                  <p className="text-sm text-neutral-500">
-                    & {testimonials[activeIndex].ownerName}
-                  </p>
+                <p className="text-neutral-600">
+                  {testimonials[activeIndex].message}
+                </p>
+                <div className="mt-4 flex items-center text-primary-foreground">
+                  <Heart size={16} className="mr-2 fill-current" />
+                  <span className="text-sm">Verified Customer</span>
                 </div>
-              </div>
-              <p className="text-neutral-600">
-                {testimonials[activeIndex].message}
-              </p>
-              <div className="mt-4 flex items-center text-primary-foreground">
-                <Heart size={16} className="mr-2 fill-current" />
-                <span className="text-sm">Verified Customer</span>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
 
             <div className="flex justify-center mt-4 gap-2">
               {testimonials.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => changeTestimonial(idx)}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    activeIndex === idx ? 'bg-kitty-pink' : 'bg-neutral-300'
-                  }`}
+                  className={`w-3 h-3 rounded-full transition-colors ${activeIndex === idx ? 'bg-kitty-pink' : 'bg-neutral-300'}`}
                   disabled={isTransitioning}
                 />
               ))}
@@ -240,7 +248,7 @@ const Testimonials = () => {
         </div>
         <div></div>
 
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-start mt-10">
           <h3 className="text-2xl font-display font-semibold mb-4">
             Over 50,000 happy cats can't be wrong!
           </h3>
