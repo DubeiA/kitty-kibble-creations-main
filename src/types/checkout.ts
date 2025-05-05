@@ -1,4 +1,3 @@
-
 export type CartItem = {
   id: string;
   name: string;
@@ -15,7 +14,13 @@ export type CheckoutFormData = {
   city: string;
 };
 
-export type OrderStatus = 'pending' | 'processing' | 'awaiting_shipment' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'awaiting_shipment'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
 
 export type Order = {
   id: string;

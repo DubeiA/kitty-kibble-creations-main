@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -55,10 +54,17 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display font-semibold;
   }
 }
@@ -67,15 +73,15 @@
   .btn-primary {
     @apply bg-kitty-pink hover:bg-kitty-peach text-primary-foreground font-medium px-6 py-3 rounded-full transition-all duration-300 shadow-sm hover:shadow flex items-center justify-center gap-2;
   }
-  
+
   .btn-secondary {
     @apply bg-neutral-200 hover:bg-neutral-300 text-foreground font-medium px-6 py-3 rounded-full transition-all duration-300;
   }
-  
+
   .section-title {
     @apply text-3xl md:text-4xl font-display font-bold mb-4;
   }
-  
+
   .section-subtitle {
     @apply text-lg text-neutral-600 mb-8 max-w-2xl mx-auto;
   }

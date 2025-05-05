@@ -38,5 +38,7 @@ export const useProducts = (
 
       return { data: data || [], count, error };
     },
+    staleTime: 5 * 60 * 1000, // Дані вважаються свіжими 5 хвилин
+    gcTime: 30 * 60 * 1000, // Кеш зберігається 30 хвилин
   });
 };

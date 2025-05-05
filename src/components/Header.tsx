@@ -114,7 +114,7 @@ const Header = () => {
 
         {/* Cart, Auth & CTA Button */}
         <div className="hidden md:flex items-center gap-4">
-          <Link to="/cart" className="relative">
+          <Link to="/checkout" className="relative">
             <Button variant="ghost" size="icon">
               <ShoppingCart size={24} />
               {cartItemsCount > 0 && (
@@ -138,7 +138,7 @@ const Header = () => {
 
         {/* Mobile Menu Button */}
         <div className="md:hidden flex items-center gap-4">
-          <Link to="/cart" className="relative">
+          <Link to="/checkout" className="relative">
             <Button variant="ghost" size="icon">
               <ShoppingCart size={24} />
               {cartItemsCount > 0 && (

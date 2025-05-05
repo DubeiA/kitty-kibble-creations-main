@@ -1,18 +1,20 @@
-
 import { CartItem, Order, OrderStatus } from '../types/checkout';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-
-export const getCartFromStorage = (): CartItem[] => {
-  const savedCart = localStorage.getItem('cart');
-  return savedCart ? JSON.parse(savedCart) : [];
-};
+import { useCartStore } from '@/store/cartStore';
 
 export const calculateTotal = (cartItems: CartItem[]): number => {
-  return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  return cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 };
 
-export const createOrder = async (customerData: any, cartItems: CartItem[], customerId?: string): Promise<Order | null> => {
+export const createOrder = async (
+  customerData: any,
+  cartItems: CartItem[],
+  customerId?: string
+): Promise<Order | null> => {
   try {
     const orderData = {
       id: uuidv4(),
@@ -67,8 +69,8 @@ export const createOrder = async (customerData: any, cartItems: CartItem[], cust
           quantity: item.quantity,
           price_at_time: item.price,
           total_price: item.price * item.quantity,
-          image_url: item.image_url
-        }))
+          image_url: item.image_url,
+        })),
       };
 
       return order;
@@ -84,14 +86,14 @@ export const createOrder = async (customerData: any, cartItems: CartItem[], cust
           quantity: item.quantity,
           price_at_time: item.price,
           total_price: item.price * item.quantity,
-          image_url: item.image_url
-        }))
+          image_url: item.image_url,
+        })),
       };
 
       const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
       existingOrders.push(order);
       localStorage.setItem('orders', JSON.stringify(existingOrders));
-      
+
       return order;
     }
   } catch (error) {
@@ -100,7 +102,9 @@ export const createOrder = async (customerData: any, cartItems: CartItem[], cust
   }
 };
 
-export const getStatusDisplay = (status: OrderStatus): { label: string; color: string } => {
+export const getStatusDisplay = (
+  status: OrderStatus
+): { label: string; color: string } => {
   switch (status) {
     case 'pending':
       return { label: 'Очікує обробки', color: 'yellow' };
@@ -120,18 +124,18 @@ export const getStatusDisplay = (status: OrderStatus): { label: string; color: s
 };
 
 export const getOrderStatusIcon = (status: OrderStatus) => {
-  switch(status) {
+  switch (status) {
     case 'delivered':
-      return { icon: 'CheckCircle', className: "h-5 w-5 text-green-500" };
+      return { icon: 'CheckCircle', className: 'h-5 w-5 text-green-500' };
     case 'shipped':
-      return { icon: 'Truck', className: "h-5 w-5 text-purple-500" };
+      return { icon: 'Truck', className: 'h-5 w-5 text-purple-500' };
     case 'processing':
-      return { icon: 'Package', className: "h-5 w-5 text-blue-500" };
+      return { icon: 'Package', className: 'h-5 w-5 text-blue-500' };
     case 'awaiting_shipment':
-      return { icon: 'PackageCheck', className: "h-5 w-5 text-orange-500" };
+      return { icon: 'PackageCheck', className: 'h-5 w-5 text-orange-500' };
     case 'cancelled':
-      return { icon: 'XCircle', className: "h-5 w-5 text-red-500" };
+      return { icon: 'XCircle', className: 'h-5 w-5 text-red-500' };
     default:
-      return { icon: 'Clock', className: "h-5 w-5 text-yellow-500" };
+      return { icon: 'Clock', className: 'h-5 w-5 text-yellow-500' };
   }
 };

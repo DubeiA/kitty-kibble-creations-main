@@ -19,15 +19,13 @@ const Index = () => {
   const isMobile = useIsMobile();
   const maxProducts = isMobile ? 9 : 15;
 
-  // Отримай всі продукти (наприклад, без фільтрації по категорії)
-  const { data: result, error } = useProducts('all', 1, 1000000);
+  // Отримай всі продукти для фільтрації улюблених
+  const { data: result, error } = useProducts('all', 1, 100);
   const products = result?.data || [];
-  // Фільтруй тільки улюблені
-  const favoriteProducts = products.filter(product => product.is_favorite);
-
-  console.log(favoriteProducts);
-
-  const productsToShow = favoriteProducts.slice(0, maxProducts);
+  // Фільтруй тільки улюблені і обмеж до maxProducts
+  const favoriteProducts = products
+    .filter(product => product.is_favorite)
+    .slice(0, maxProducts);
 
   useEffect(() => {
     // Enable smooth scrolling
@@ -61,7 +59,7 @@ const Index = () => {
       <main>
         <Hero />
         <CategorySelector />
-        <ProductListing products={productsToShow} />
+        <ProductListing products={favoriteProducts} />
         <WhyOurFood />
         <Testimonials />
         <FAQ />

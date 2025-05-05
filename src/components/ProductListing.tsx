@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { useProducts, ProductCategory, AnimalType } from '@/hooks/useProducts';
 import ProductCard from './ProductCard';
+import { useCartStore } from '@/store/cartStore';
 
 // Types for product filters
 type ProductFilterType =
@@ -43,25 +44,6 @@ const fallbackImages = {
   default: '/placeholder.svg',
 };
 
-// Get cart from localStorage
-const getCartFromStorage = () => {
-  const savedCart = localStorage.getItem('cart');
-  const cart = savedCart ? JSON.parse(savedCart) : [];
-
-  // Ensure all cart items have their cached images
-  return cart.map(item => ({
-    ...item,
-    image: localStorage.getItem(`product-image-${item.id}`) || item.image,
-  }));
-};
-
-// Save cart to localStorage
-const saveCartToStorage = cart => {
-  localStorage.setItem('cart', JSON.stringify(cart));
-  // Dispatch custom event for cart updates
-  window.dispatchEvent(new Event('cartUpdated'));
-};
-
 const FILTERS = {
   cat: [
     { value: 'all', label: 'All Cat Food' },
@@ -97,6 +79,7 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
   const [activeFilter, setActiveFilter] = useState<ProductFilterType>('all');
   const { toast } = useToast();
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const addToCart = useCartStore(state => state.addToCart);
 
   const selectedCategory = searchParams.get('category') || 'all';
 
@@ -149,39 +132,18 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
   };
 
   const handleAddToCart = product => {
-    // Get current cart
-    const currentCart = getCartFromStorage();
-
     // Get image URL - either from the product or use fallback
     const imageUrl = product.image_url || getFallbackImage(product.animal_type);
-
     // Cache the image URL in localStorage
     localStorage.setItem(`product-image-${product.id}`, imageUrl);
-
-    // Check if product is already in cart
-    const existingProductIndex = currentCart.findIndex(
-      item => item.id === product.id
-    );
-
-    if (existingProductIndex !== -1) {
-      // If product exists, increase quantity
-      currentCart[existingProductIndex].quantity += 1;
-      // Ensure image is preserved
-      currentCart[existingProductIndex].image = imageUrl;
-    } else {
-      // If not, add new product to cart
-      currentCart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1,
-        image: imageUrl,
-      });
-    }
-
-    // Save updated cart to localStorage
-    saveCartToStorage(currentCart);
-
+    // Додаємо товар у Zustand-кошик
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: 1,
+      image: imageUrl,
+    });
     // Show success toast
     toast({
       title: 'Added to cart',

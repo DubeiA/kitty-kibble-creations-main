@@ -1,11 +1,12 @@
 import { Check, Heart, LeafyGreen, PawPrint, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnimalType } from '@/hooks/useProducts';
+import { useState, useEffect } from 'react';
 
 const fallbackImages = {
-  cat: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
-  dog: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b',
-  fish: 'https://images.unsplash.com/photo-1522069169874-c58ec4b76be5',
+  cat: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&h=256&fit=crop&auto=format',
+  dog: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=300&h=256&fit=crop&auto=format',
+  fish: 'https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=300&h=256&fit=crop&auto=format',
   default: '/placeholder.svg',
 };
 
@@ -22,21 +23,84 @@ const ProductCard = ({
   onImageError,
   onAddToCart,
 }: ProductCardProps) => {
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [cachedImageUrl, setCachedImageUrl] = useState<string | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+
+  const getOptimizedImageUrl = (url: string) => {
+    if (url.includes('unsplash.com')) {
+      return `${url}?w=300&h=256&fit=crop&auto=format&fm=webp`;
+    }
+    return url;
+  };
+
+  useEffect(() => {
+    const imageUrl = imageError
+      ? fallbackImages[product.animal_type] || fallbackImages.default
+      : product.image_url ||
+        fallbackImages[product.animal_type] ||
+        fallbackImages.default;
+
+    const optimizedUrl = getOptimizedImageUrl(imageUrl);
+    setCurrentImageUrl(optimizedUrl);
+
+    // Перевіряємо кеш
+    const cachedUrl = localStorage.getItem(`product-image-${product.id}`);
+    if (cachedUrl && cachedUrl === optimizedUrl) {
+      setCachedImageUrl(cachedUrl);
+      setIsImageLoaded(true);
+      return;
+    }
+
+    // Якщо URL змінився або немає в кеші, завантажуємо
+    const img = new Image();
+    img.src = optimizedUrl;
+
+    img.onload = () => {
+      setIsImageLoaded(true);
+      // Зберігаємо в кеш
+      localStorage.setItem(`product-image-${product.id}`, optimizedUrl);
+      setCachedImageUrl(optimizedUrl);
+    };
+
+    img.onerror = () => {
+      // Якщо помилка завантаження, видаляємо з кешу
+      localStorage.removeItem(`product-image-${product.id}`);
+      setCachedImageUrl(null);
+      setIsImageLoaded(false);
+      onImageError();
+    };
+  }, [
+    product.id,
+    product.image_url,
+    product.animal_type,
+    imageError,
+    onImageError,
+  ]);
+
   return (
     <div className="product-card group">
       <div className="relative overflow-hidden">
+        {!isImageLoaded && (
+          <div className="w-full h-64 bg-neutral-200 animate-pulse" />
+        )}
         <img
           loading="lazy"
-          src={
-            imageError
-              ? fallbackImages[product.animal_type] || fallbackImages.default
-              : product.image_url ||
-                fallbackImages[product.animal_type] ||
-                fallbackImages.default
-          }
+          decoding="async"
+          width="300"
+          height="256"
+          src={cachedImageUrl || currentImageUrl || fallbackImages.default}
           alt={product.name}
-          className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={onImageError}
+          className={`w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105 ${
+            isImageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onError={() => {
+            localStorage.removeItem(`product-image-${product.id}`);
+            setCachedImageUrl(null);
+            setIsImageLoaded(false);
+            onImageError();
+          }}
+          // fetchPriority="low"
         />
         {product.is_favorite && (
           <div className="absolute top-3 right-3 bg-white rounded-full p-1.5 shadow-sm">
