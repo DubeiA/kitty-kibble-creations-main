@@ -56,7 +56,7 @@ const Checkout = () => {
         const { data: latestOrder, error: orderError } = await supabase
           .from('orders')
           .select('*')
-          .eq('customer_id', userId)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();

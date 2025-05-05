@@ -16,10 +16,18 @@ export const createOrder = async (
   customerId?: string
 ): Promise<Order | null> => {
   try {
+    // --- Формування user_id для авторизованого і гостя ---
+    let userId = customerId;
+    if (!userId) {
+      userId = localStorage.getItem('guest_user_id');
+      if (!userId) {
+        userId = uuidv4();
+        localStorage.setItem('guest_user_id', userId);
+      }
+    }
     const orderData = {
       id: uuidv4(),
-      user_id: customerId || uuidv4(),
-      customer_id: customerId,
+      user_id: userId,
       total_amount: calculateTotal(cartItems),
       customer_name: customerData.name,
       customer_email: customerData.email,

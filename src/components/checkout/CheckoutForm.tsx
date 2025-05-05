@@ -26,6 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
+import { useState, useEffect } from 'react';
+import { createOrder } from '@/utils/checkoutUtils';
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -77,6 +80,17 @@ export function CheckoutForm({
     useCartStore();
   const shipping = useOrderStore(state => state.shipping);
   const { toast } = useToast();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) setUser(session.user);
+    };
+    getUser();
+  }, []);
 
   const handleNovaPoshtaSelect = async (city: string, warehouse: string) => {
     form.setValue('city', city);
@@ -200,11 +214,30 @@ export function CheckoutForm({
         Recipient: recipientRef,
       };
 
+      console.log(recipientData);
+
+      // seatsAmount: кількість місць (можна зробити = 1 або items.length)
+      const seatsAmount = 1;
+      const totalWeight = items.reduce(
+        (acc, item) => acc + item.quantity * 0.5,
+        0.5
+      );
       const cargoData = {
-        Weight: items.reduce((acc, item) => acc + item.quantity * 0.5, 0.5),
+        Weight: totalWeight,
         ServiceType: 'WarehouseWarehouse' as const,
-        SeatsAmount: 1,
-        Description: 'Ваше замовлення з Kitty Kibble',
+        SeatsAmount: seatsAmount,
+        Description: items
+          .map(item => `${item.name} x${item.quantity}`)
+          .join(', '),
+        OptionsSeat: [
+          {
+            volumetricVolume: 0.1, // мінімальний об'єм
+            volumetricWidth: 10,
+            volumetricLength: 10,
+            volumetricHeight: 10,
+            weight: totalWeight,
+          },
+        ],
       };
 
       const waybillNumber = await NovaPoshtaServices.createWaybill(
@@ -215,54 +248,27 @@ export function CheckoutForm({
         values.paymentMethod
       );
 
-      // Створюємо замовлення в базі даних
-      const orderData = {
-        id: waybillNumber,
-        user_id: values.email, // Використовуємо email як user_id для неавторизованих користувачів
-        customer_id: null,
-        total_amount: total,
-        customer_name: `${values.firstName} ${values.lastName}`,
-        customer_email: values.email,
-        customer_phone: values.phone,
-        shipping_address: values.warehouse,
-        shipping_city: values.city,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'pending',
+      // --- Формуємо дані для createOrder ---
+      const customerData = {
+        name: `${values.firstName} ${values.lastName}`,
+        email: values.email,
+        phone: values.phone,
+        address: values.warehouse,
+        city: values.city,
+        waybill_number: waybillNumber,
       };
-
-      // Зберігаємо замовлення в базі даних
-      const { data: orderResult, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) {
+      // Викликаємо createOrder з utils
+      const orderResult = await createOrder(
+        customerData,
+        items,
+        user ? user.id : undefined
+      );
+      if (!orderResult) {
         throw new Error('Помилка при збереженні замовлення');
       }
+      console.log('orderResult:', orderResult);
 
-      // Зберігаємо товари замовлення
-      const orderItems = items.map(item => ({
-        order_id: orderResult.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price_at_time: item.price,
-        created_at: new Date().toISOString(),
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) {
-        throw new Error('Помилка при збереженні товарів замовлення');
-      }
-
-      // Очищаємо кошик
       clearCart();
-
-      console.log('Waybill created:', waybillNumber);
       onSubmit(values);
     } catch (error) {
       console.error('Nova Poshta error:', error);
