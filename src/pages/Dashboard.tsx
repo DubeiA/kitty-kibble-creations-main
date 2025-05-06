@@ -30,57 +30,71 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let isMounted = true;
     const checkSession = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
+      if (!session || !session.user || !session.user.email) {
         navigate('/auth');
         return;
       }
 
-      setUser(session.user);
-      if (user) {
-        fetchOrders(user.id, page);
+      if (isMounted) {
+        setUser(session.user);
+        fetchOrders(session.user.id, page);
       }
     };
 
     checkSession();
 
     // Set up real-time subscription to order updates
-    const channel = supabase
-      .channel('public:orders')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        payload => {
-          // When an order is updated, refresh the orders
-          if (user?.id) {
-            fetchOrders(user.id);
-          }
-        }
-      )
-      .subscribe();
+    let channel: any = null;
+    let authListener: any = null;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    const setupRealtime = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const currentUser = session?.user;
+      if (!currentUser || !currentUser.email) return;
+      channel = supabase
+        .channel('public:orders')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          payload => {
+            if (currentUser.id) {
+              fetchOrders(currentUser.id);
+            }
+          }
+        )
+        .subscribe();
+
+      authListener = supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_OUT') {
           navigate('/auth');
         }
-      }
-    );
+      });
+    };
+    setupRealtime();
 
     return () => {
-      authListener.subscription.unsubscribe();
-      supabase.removeChannel(channel);
+      isMounted = false;
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, [navigate, user?.id, page]);
+  }, [navigate, page]);
 
   const fetchOrders = async (userId: string, pageNumber = 0) => {
     const from = pageNumber * PAGE_SIZE;
@@ -125,8 +139,10 @@ const Dashboard = () => {
                 product_id: item.product_id,
                 product_name: item.products?.name || 'Невідомий товар',
                 quantity: item.quantity,
-                price_at_time: item.price_at_time,
-                total_price: item.price_at_time * item.quantity,
+                price_at_time: Number(item.price_at_time.toFixed(2)),
+                total_price: Number(
+                  (item.price_at_time * item.quantity).toFixed(2)
+                ),
                 image_url: item.products?.image_url || '',
               }))
             : [],

@@ -54,6 +54,10 @@ export const NovaPoshtaSelector: React.FC<NovaPoshtaSelectorProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreWarehouses, setHasMoreWarehouses] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Завантажуємо області при першому рендері
   useEffect(() => {
@@ -106,32 +110,42 @@ export const NovaPoshtaSelector: React.FC<NovaPoshtaSelectorProps> = ({
     fetchCities();
   }, [selectedArea]);
 
-  useEffect(() => {
-    const fetchWarehouses = async () => {
-      if (!selectedCity) {
-        setWarehouses([]);
-        return;
-      }
+  const loadWarehouses = async (cityRef: string, page: number = 1) => {
+    try {
+      setIsLoadingWarehouses(true);
 
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await NovaPoshtaServices.getWarehouses(selectedCity);
-        if (response.success) {
+      const response = await NovaPoshtaServices.getWarehouses(cityRef, page);
+
+      if (response.success && response.data) {
+        if (page === 1) {
           setWarehouses(response.data);
         } else {
-          setError('Не вдалося завантажити список відділень');
+          setWarehouses(prev => [...prev, ...response.data]);
         }
-      } catch (err) {
-        setError('Помилка при завантаженні відділень');
-        console.error('Error fetching warehouses:', err);
-      } finally {
-        setLoading(false);
+        setHasMoreWarehouses(response.data.length === 50);
+      } else {
+        console.error('Failed to load warehouses:', response);
+        setError('Не вдалося завантажити список відділень');
       }
-    };
+    } catch (error) {
+      console.error('Error loading warehouses:', error);
+      setError('Помилка при завантаженні відділень');
+    } finally {
+      setIsLoadingWarehouses(false);
+    }
+  };
 
-    fetchWarehouses();
-  }, [selectedCity]);
+  const loadMoreWarehouses = () => {
+    if (!isLoadingWarehouses && hasMoreWarehouses && selectedCity) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadWarehouses(selectedCity, nextPage);
+    }
+  };
+
+  const filteredWarehouses = warehouses.filter(warehouse =>
+    warehouse.Description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleAreaChange = (value: string) => {
     setSelectedArea(value);
@@ -139,19 +153,16 @@ export const NovaPoshtaSelector: React.FC<NovaPoshtaSelectorProps> = ({
     setSelectedWarehouse('');
   };
 
-  const handleCityChange = (value: string) => {
+  const handleCityChange = async (value: string) => {
     setSelectedCity(value);
     setSelectedWarehouse('');
+    setWarehouses([]);
+    setCurrentPage(1);
+    setHasMoreWarehouses(true);
     setOpen(false);
+    await loadWarehouses(value);
   };
 
-  const handleWarehouseChange = (value: string) => {
-    setSelectedWarehouse(value);
-    onSelect(selectedCity, value);
-  };
-
-  const selectedAreaName =
-    areas.find(area => area.Ref === selectedArea)?.Description || '';
   const selectedCityName =
     cities.find(city => city.Ref === selectedCity)?.Description || '';
 
@@ -220,23 +231,41 @@ export const NovaPoshtaSelector: React.FC<NovaPoshtaSelectorProps> = ({
 
       {selectedCity && (
         <div className="space-y-2">
-          <Label htmlFor="warehouse">Відділення</Label>
-          <Select
+          <label className="block text-sm font-medium text-gray-700">
+            Відділення
+          </label>
+          <input
+            type="text"
+            placeholder="Пошук відділення..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          <select
             value={selectedWarehouse}
-            onValueChange={handleWarehouseChange}
-            disabled={loading}
+            onChange={e => {
+              setSelectedWarehouse(e.target.value);
+              onSelect(selectedCity, e.target.value);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={isLoadingWarehouses}
           >
-            <SelectTrigger id="warehouse">
-              <SelectValue placeholder="Виберіть відділення" />
-            </SelectTrigger>
-            <SelectContent>
-              {warehouses.map(warehouse => (
-                <SelectItem key={warehouse.Ref} value={warehouse.Ref}>
-                  {warehouse.Description}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">Виберіть відділення</option>
+            {filteredWarehouses.map(warehouse => (
+              <option key={warehouse.Ref} value={warehouse.Ref}>
+                {warehouse.Description}
+              </option>
+            ))}
+          </select>
+          {hasMoreWarehouses && (
+            <button
+              onClick={loadMoreWarehouses}
+              disabled={isLoadingWarehouses}
+              className="w-full mt-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+            >
+              {isLoadingWarehouses ? 'Завантаження...' : 'Завантажити більше'}
+            </button>
+          )}
         </div>
       )}
 

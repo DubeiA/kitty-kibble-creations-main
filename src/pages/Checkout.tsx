@@ -7,7 +7,7 @@ import NewsletterAndFooter from '../components/NewsletterAndFooter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
-import { createOrder } from '@/utils/checkoutUtils';
+// import { createOrder } from '@/utils/checkoutUtils';
 import type { CheckoutFormValues } from '@/schemas/checkoutSchema';
 import { useCartStore } from '@/store/cartStore';
 
@@ -26,10 +26,15 @@ const Checkout = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        // Fetch user profile data from database
-        await fetchUserData(session.user.id);
+      const currentUser = session?.user;
+
+      if (!currentUser?.email) {
+        // гість або тимчасовий користувач
+        await supabase.auth.signOut(); // викидай тільки їх
+        localStorage.removeItem('cart');
+      } else {
+        setUser(currentUser); // зберігай реального користувача
+        await fetchUserData(currentUser.id);
       }
     };
 
@@ -79,60 +84,6 @@ const Checkout = () => {
     }
   };
 
-  const createOrUpdateCustomer = async (
-    formData: CheckoutFormValues,
-    userId?: string
-  ) => {
-    if (!userId) return null;
-
-    try {
-      // Check if customer exists
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('id', userId)
-        .single();
-
-      if (existingCustomer) {
-        // Update existing customer
-        const { data, error } = await supabase
-          .from('customers')
-          .update({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      } else {
-        // Create new customer
-        const { data, error } = await supabase
-          .from('customers')
-          .insert({
-            id: userId,
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      }
-    } catch (error) {
-      console.error('Error creating/updating customer:', error);
-      return null;
-    }
-  };
-
   const handleSubmit = async (values: CheckoutFormValues) => {
     setOrderError(null);
     setIsProcessing(true);
@@ -148,28 +99,6 @@ const Checkout = () => {
         });
         setIsProcessing(false);
         return;
-      }
-
-      // Create or update customer if logged in
-      const customerId = user ? user.id : undefined;
-      if (customerId) {
-        await createOrUpdateCustomer(values, customerId);
-      }
-
-      // Create order
-      const orderDetails = await createOrder(values, cartItems, customerId);
-
-      if (!orderDetails) {
-        throw new Error('Не вдалося створити замовлення');
-      }
-
-      // If not logged in, save to localStorage
-      if (!customerId) {
-        const existingOrders = JSON.parse(
-          localStorage.getItem('orders') || '[]'
-        );
-        existingOrders.push(orderDetails);
-        localStorage.setItem('orders', JSON.stringify(existingOrders));
       }
 
       // Clear cart and form data

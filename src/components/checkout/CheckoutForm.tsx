@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from 'uuid';
 import { useState, useEffect } from 'react';
 import { createOrder } from '@/utils/checkoutUtils';
 
@@ -36,6 +35,9 @@ const formSchema = z.object({
   }),
   lastName: z.string().min(2, {
     message: 'Прізвище має бути не менше 2 символів',
+  }),
+  middleName: z.string().min(2, {
+    message: 'По батькові має бути не менше 2 символів',
   }),
   phone: z.string().min(10, {
     message: 'Введіть коректний номер телефону',
@@ -67,6 +69,7 @@ export function CheckoutForm({
       paymentMethod: 'Cash',
       firstName: '',
       lastName: '',
+      middleName: '',
       phone: '',
       email: '',
       city: '',
@@ -169,14 +172,29 @@ export function CheckoutForm({
       const senderWarehouseRef = senderWarehousesResponse.data[0].Ref;
 
       // 4. Створюємо отримувача
+      console.log('Форма передає дані:', {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        middleName: values.middleName,
+      });
+
       const recipientResponse = await NovaPoshtaServices.saveCounterparty({
         CounterpartyType: 'PrivatePerson',
         CounterpartyProperty: 'Recipient',
         CityRef: values.city,
         FirstName: values.firstName,
         LastName: values.lastName,
+        MiddleName: values.middleName,
         Phone: values.phone,
       });
+
+      console.log('Recipient response:', recipientResponse);
+
+      console.log(
+        'Відповідь від API при створенні отримувача:',
+        recipientResponse
+      );
+
       if (
         !recipientResponse.success ||
         !recipientResponse.data ||
@@ -189,6 +207,7 @@ export function CheckoutForm({
       // 5. Отримуємо контактну особу отримувача
       const contactRecipientResponse =
         await NovaPoshtaServices.getCounterpartyContactPersons(recipientRef);
+
       if (
         !contactRecipientResponse.success ||
         !contactRecipientResponse.data ||
@@ -196,7 +215,19 @@ export function CheckoutForm({
       ) {
         throw new Error('Не знайдено контактну особу отримувача');
       }
-      const contactRecipientRef = contactRecipientResponse.data[0].Ref;
+
+      // Знаходимо саме ту контактну особу, яку щойно створили
+      const contactPerson = contactRecipientResponse.data.find(
+        person =>
+          person.FirstName === values.firstName &&
+          person.LastName === values.lastName &&
+          person.MiddleName === values.middleName
+      );
+
+      if (!contactPerson) {
+        throw new Error('Не знайдено контактну особу з такими ПІБ');
+      }
+      const contactRecipientRef = contactPerson.Ref;
 
       const senderData = {
         CitySender: '8d5a980d-391c-11dd-90d9-001a92567626', // Ref Києва
@@ -209,14 +240,21 @@ export function CheckoutForm({
       const recipientData = {
         CityRecipient: values.city,
         RecipientAddress: values.warehouse,
-        ContactRecipient: contactRecipientRef,
         RecipientsPhone: values.phone,
+        FirstName: values.firstName, // Передаємо ім'я напряму з форми
+        LastName: values.lastName, // Передаємо прізвище напряму з форми
+        MiddleName: values.middleName, // Передаємо по батькові напряму з форми
         Recipient: recipientRef,
+        ContactRecipient: contactRecipientRef,
       };
 
-      console.log(recipientData);
+      console.log('Дані для створення накладної:', {
+        recipientData,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        middleName: values.middleName,
+      });
 
-      // seatsAmount: кількість місць (можна зробити = 1 або items.length)
       const seatsAmount = 1;
       const totalWeight = items.reduce(
         (acc, item) => acc + item.quantity * 0.5,
@@ -250,13 +288,41 @@ export function CheckoutForm({
 
       // --- Формуємо дані для createOrder ---
       const customerData = {
-        name: `${values.firstName} ${values.lastName}`,
+        name: `${values.lastName} ${values.firstName} ${values.middleName}`,
         email: values.email,
         phone: values.phone,
-        address: values.warehouse,
+        warehouse: values.warehouse,
         city: values.city,
         waybill_number: waybillNumber,
       };
+
+      // Перевіряємо, чи не існує вже замовлення з таким waybill_number
+      try {
+        const { data: existingOrder, error } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('waybill_number', waybillNumber);
+
+        if (error) {
+          console.error('Error checking existing order:', error);
+        }
+
+        if (existingOrder && existingOrder.length > 0) {
+          console.log(
+            'Order with this waybill number already exists:',
+            existingOrder
+          );
+          toast({
+            title: 'Помилка',
+            description: 'Замовлення з таким номером накладної вже існує',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking for duplicate order:', error);
+      }
+
       // Викликаємо createOrder з utils
       const orderResult = await createOrder(
         customerData,
@@ -266,7 +332,6 @@ export function CheckoutForm({
       if (!orderResult) {
         throw new Error('Помилка при збереженні замовлення');
       }
-      console.log('orderResult:', orderResult);
 
       clearCart();
       onSubmit(values);
@@ -410,6 +475,22 @@ export function CheckoutForm({
                       <FormLabel>Прізвище</FormLabel>
                       <FormControl>
                         <Input placeholder="Введіть ваше прізвище" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="middleName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>По батькові</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Введіть ваше по батькові"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

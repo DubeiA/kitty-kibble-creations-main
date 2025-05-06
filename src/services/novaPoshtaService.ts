@@ -76,11 +76,23 @@ export class NovaPoshtaServices {
   }
 
   static async getWarehouses(
-    cityRef: string
+    cityRef: string,
+    page: number = 1,
+    limit: number = 50
   ): Promise<ApiResponse<Warehouse[]>> {
-    return this.makeRequest<Warehouse[]>('Address', 'getWarehouses', {
-      CityRef: cityRef,
-    });
+    const response = await this.makeRequest<Warehouse[]>(
+      'Address',
+      'getWarehouses',
+      {
+        CityRef: cityRef,
+        Page: page.toString(),
+        Limit: limit.toString(),
+        Language: 'UA',
+        TypeOfWarehouseRef: '841339c7-591a-42e2-8233-7a0a00f0ed6f', // Ref типу відділення (відділення)
+      }
+    );
+
+    return response;
   }
 
   static async calculateShippingCost(
@@ -89,13 +101,6 @@ export class NovaPoshtaServices {
     weight: number,
     cost: number
   ): Promise<ShippingCost> {
-    console.log('Calculating shipping cost:', {
-      citySender,
-      cityRecipient,
-      weight,
-      cost,
-    });
-
     const response = await this.makeRequest(
       'InternetDocument',
       'getDocumentPrice',
@@ -109,6 +114,46 @@ export class NovaPoshtaServices {
     );
 
     return response.data[0];
+  }
+
+  static async getCityByRef(cityRef: string): Promise<City | null> {
+    try {
+      const response = await this.makeRequest<City[]>('Address', 'getCities', {
+        Ref: cityRef,
+      });
+
+      if (!response.success || !response.data || response.data.length === 0) {
+        console.error('Failed to get city data:', response);
+        return null;
+      }
+      return response.data[0];
+    } catch (error) {
+      console.error('Error getting city by ref:', error);
+      return null;
+    }
+  }
+
+  static async getWarehouseByRef(
+    warehouseRef: string
+  ): Promise<Warehouse | null> {
+    try {
+      const response = await this.makeRequest<Warehouse[]>(
+        'Address',
+        'getWarehouses',
+        {
+          Ref: warehouseRef,
+        }
+      );
+
+      if (!response.success || !response.data || response.data.length === 0) {
+        console.error('Failed to get warehouse data:', response);
+        return null;
+      }
+      return response.data[0];
+    } catch (error) {
+      console.error('Error getting warehouse by ref:', error);
+      return null;
+    }
   }
 
   static async getCounterparties(
@@ -137,7 +182,9 @@ export class NovaPoshtaServices {
     Phone: string;
     MiddleName?: string;
   }): Promise<ApiResponse<any>> {
-    return this.makeRequest('Counterparty', 'save', data);
+    const response = await this.makeRequest('Counterparty', 'save', data);
+
+    return response;
   }
 
   static async getSenderWarehouses(
@@ -145,6 +192,7 @@ export class NovaPoshtaServices {
   ): Promise<ApiResponse<any[]>> {
     return this.makeRequest('Address', 'getWarehouses', {
       CityRef: cityRef,
+
       TypeOfWarehouseRef: '841339c7-591a-42e2-8233-7a0a00f0ed6f', // Ref типу відділення (відділення)
     });
   }
@@ -160,9 +208,12 @@ export class NovaPoshtaServices {
     recipientData: {
       CityRecipient: string;
       RecipientAddress: string;
-      ContactRecipient: string;
       RecipientsPhone: string;
+      FirstName: string;
+      LastName: string;
+      MiddleName: string;
       Recipient: string;
+      ContactRecipient: string;
     },
     cargoData: {
       Weight: number;
@@ -173,13 +224,7 @@ export class NovaPoshtaServices {
     payerType: 'Sender' | 'Recipient',
     paymentMethod: 'Cash' | 'NonCash'
   ): Promise<string> {
-    console.log('Creating waybill:', {
-      senderData,
-      recipientData,
-      cargoData,
-      payerType,
-      paymentMethod,
-    });
+    console.log('Creating waybill with recipient data:', recipientData);
 
     const response = await this.makeRequest('InternetDocument', 'save', {
       Sender: senderData.Sender,
@@ -192,6 +237,9 @@ export class NovaPoshtaServices {
       RecipientAddress: recipientData.RecipientAddress,
       ContactRecipient: recipientData.ContactRecipient,
       RecipientsPhone: recipientData.RecipientsPhone,
+      FirstName: recipientData.FirstName,
+      LastName: recipientData.LastName,
+      MiddleName: recipientData.MiddleName,
       CargoType: 'Cargo',
       Weight: cargoData.Weight,
       ServiceType: cargoData.ServiceType,
@@ -202,7 +250,7 @@ export class NovaPoshtaServices {
       DateTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
     });
 
-    console.log('Nova Poshta response:', response);
+    console.log('Waybill creation response:', response);
 
     if (!response.success || !response.data || !response.data[0]) {
       throw new Error(
@@ -213,7 +261,6 @@ export class NovaPoshtaServices {
   }
 
   static async trackWaybill(waybillNumber: string): Promise<TrackingInfo> {
-    console.log('Tracking waybill:', waybillNumber);
     const response = await this.makeRequest(
       'TrackingDocument',
       'getStatusDocuments',

@@ -1,17 +1,16 @@
-import { Navigate } from "react-router-dom";
-import { useCurrentUser } from "@/hooks/currentUser";
+import { Navigate } from 'react-router-dom';
+import { useCurrentUser } from '@/hooks/currentUser';
 
 export function ProtectedRoute({ children, onlyAdmin = false }) {
   const { user, loading } = useCurrentUser();
 
   const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-  
-
 
   if (loading) return <div>Завантаження...</div>;
 
   if (!user) {
     // Неавторизований — редірект на логін
+    localStorage.removeItem('cart');
     return <Navigate to="/auth" replace />;
   }
 
@@ -30,16 +29,6 @@ export function ProtectedRoute({ children, onlyAdmin = false }) {
 }
 
 export default ProtectedRoute;
-
-
-
-
-
-
-
-
-
-
 
 // import { useState } from 'react';
 // import { supabase } from '@/integrations/supabase/client';
@@ -70,7 +59,7 @@ export default ProtectedRoute;
 //   };
 
 //   return (
-    
+
 //     <form onSubmit={handleLogin}>
 //       <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
 //       <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Пароль" />
@@ -79,9 +68,6 @@ export default ProtectedRoute;
 //     </form>
 //   );
 // }
-
-
-
 
 // import { useState } from 'react';
 // import { Button } from '@/components/ui/button';
@@ -119,10 +105,10 @@ export default ProtectedRoute;
 //   return (
 //     <div className="flex flex-col gap-4 max-w-md mx-auto">
 //       <h2 className="text-xl font-medium">Вхід для адміністратора</h2>
-//       <Input 
-//         type="password" 
-//         placeholder="Введіть пароль" 
-//         value={password} 
+//       <Input
+//         type="password"
+//         placeholder="Введіть пароль"
+//         value={password}
 //         onChange={(e) => setPassword(e.target.value)}
 //         onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
 //       />

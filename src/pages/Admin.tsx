@@ -83,7 +83,9 @@ const Admin = () => {
           items: order.items?.map((item: any) => ({
             ...item,
             product_name: item.products?.name || 'Невідомий товар',
-            total_price: item.quantity * item.price_at_time,
+            total_price: Number(
+              (item.quantity * item.price_at_time).toFixed(2)
+            ),
           })),
         })) || [];
 

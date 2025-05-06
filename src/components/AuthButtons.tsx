@@ -24,7 +24,7 @@ const AuthButtons = () => {
     };
   }, []);
 
-  if (!user) {
+  if (!user || !user.email) {
     return (
       <Link to="/auth">
         <Button variant="outline" size="sm" className="flex items-center gap-2">

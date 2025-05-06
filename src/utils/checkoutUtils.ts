@@ -2,11 +2,13 @@ import { CartItem, Order, OrderStatus } from '../types/checkout';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { useCartStore } from '@/store/cartStore';
+import { NovaPoshtaServices } from '@/services/novaPoshtaService';
 
 export const calculateTotal = (cartItems: CartItem[]): number => {
-  return cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
+  return Number(
+    cartItems
+      .reduce((total, item) => total + item.price * item.quantity, 0)
+      .toFixed(2)
   );
 };
 
@@ -15,16 +17,35 @@ export const createOrder = async (
   cartItems: CartItem[],
   customerId?: string
 ): Promise<Order | null> => {
+  let {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    await supabase.auth.signInAnonymously();
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  }
+
   try {
     // --- Формування user_id для авторизованого і гостя ---
-    let userId = customerId;
-    if (!userId) {
-      userId = localStorage.getItem('guest_user_id');
-      if (!userId) {
-        userId = uuidv4();
-        localStorage.setItem('guest_user_id', userId);
-      }
+    const userId = user.id;
+
+    // Отримуємо назву міста та відділення з Nova Poshta API
+
+    const cityResponse = await NovaPoshtaServices.getCityByRef(
+      customerData.city
+    );
+
+    const warehouseResponse = await NovaPoshtaServices.getWarehouseByRef(
+      customerData.warehouse
+    );
+
+    if (!cityResponse || !warehouseResponse) {
+      throw new Error('Failed to get city or warehouse data');
     }
+
+    // Якщо не вдалося отримати дані через API, використовуємо значення з форми
     const orderData = {
       id: uuidv4(),
       user_id: userId,
@@ -32,78 +53,58 @@ export const createOrder = async (
       customer_name: customerData.name,
       customer_email: customerData.email,
       customer_phone: customerData.phone,
-      shipping_address: customerData.address,
-      shipping_city: customerData.city,
-      created_at: new Date().toISOString(),
+      shipping_address: warehouseResponse.Description,
+      shipping_city: cityResponse.Description,
       status: 'pending' as OrderStatus,
+      waybill_number: customerData.waybill_number,
+      created_at: new Date().toISOString(),
     };
 
-    if (customerId) {
-      // Create new order in the database
-      const { data: orderResult, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
+    // Зберігаємо замовлення в базі даних
 
-      if (orderError) {
-        console.error('Error creating order:', orderError);
-        return null;
-      }
+    const { data: orderResult, error: orderError } = await supabase
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
 
-      const orderItems = cartItems.map(item => ({
+    if (orderError) {
+      console.error('Error creating order:', orderError);
+      throw new Error('Failed to create order');
+    }
+
+    const orderItems = cartItems.map(item => ({
+      order_id: orderResult.id,
+      product_id: item.id,
+      quantity: item.quantity,
+      price_at_time: Number(item.price.toFixed(2)),
+    }));
+
+    // Create order items in the database
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      console.error('Error creating order items:', itemsError);
+      throw new Error('Failed to create order items');
+    }
+
+    const order: Order = {
+      ...orderData,
+      items: cartItems.map(item => ({
+        id: uuidv4(),
         order_id: orderResult.id,
         product_id: item.id,
+        product_name: item.name,
         quantity: item.quantity,
-        price_at_time: item.price,
-      }));
+        price_at_time: Number(item.price.toFixed(2)),
+        total_price: Number((item.price * item.quantity).toFixed(2)),
+        image_url: item.image_url,
+      })),
+    };
 
-      // Create order items in the database
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) {
-        console.error('Error creating order items:', itemsError);
-      }
-
-      const order: Order = {
-        ...orderData,
-        items: cartItems.map(item => ({
-          id: uuidv4(),
-          order_id: orderResult.id,
-          product_id: item.id,
-          product_name: item.name,
-          quantity: item.quantity,
-          price_at_time: item.price,
-          total_price: item.price * item.quantity,
-          image_url: item.image_url,
-        })),
-      };
-
-      return order;
-    } else {
-      // For guest checkout, store the order locally
-      const order: Order = {
-        ...orderData,
-        items: cartItems.map(item => ({
-          id: uuidv4(),
-          order_id: orderData.id,
-          product_id: item.id,
-          product_name: item.name,
-          quantity: item.quantity,
-          price_at_time: item.price,
-          total_price: item.price * item.quantity,
-          image_url: item.image_url,
-        })),
-      };
-
-      const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-      existingOrders.push(order);
-      localStorage.setItem('orders', JSON.stringify(existingOrders));
-
-      return order;
-    }
+    return order;
   } catch (error) {
     console.error('Error in createOrder:', error);
     return null;

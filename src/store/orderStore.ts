@@ -2,6 +2,24 @@ import { create } from 'zustand';
 import { Order, NovaPoshtaDelivery } from '../types/order';
 import { NovaPoshtaServices } from '../services/novaPoshtaService';
 
+interface SenderData {
+  FirstName: string;
+  LastName: string;
+  MiddleName?: string;
+  Phone: string;
+  City: string;
+  Warehouse: string;
+}
+
+interface RecipientData {
+  FirstName: string;
+  LastName: string;
+  MiddleName?: string;
+  Phone: string;
+  City: string;
+  Warehouse: string;
+}
+
 interface OrderState {
   order: Order | null;
   shipping: NovaPoshtaDelivery | null;
@@ -15,20 +33,8 @@ interface OrderState {
     cost: number
   ) => Promise<void>;
   createWaybill: (
-    senderData: {
-      FirstName: string;
-      LastName: string;
-      Phone: string;
-      City: string;
-      Warehouse: string;
-    },
-    recipientData: {
-      FirstName: string;
-      LastName: string;
-      Phone: string;
-      City: string;
-      Warehouse: string;
-    },
+    senderData: SenderData,
+    recipientData: RecipientData,
     cargoData: {
       Description: string;
       Weight: number;
@@ -51,6 +57,7 @@ export const useOrderStore = create<OrderState>(set => ({
   calculateShippingCost: async (citySender, cityRecipient, weight, cost) => {
     set({ loading: true, error: null });
     try {
+      console.log('Sender');
       const shippingCost = await NovaPoshtaServices.calculateShippingCost(
         citySender,
         cityRecipient,
@@ -86,13 +93,37 @@ export const useOrderStore = create<OrderState>(set => ({
   ) => {
     set({ loading: true, error: null });
     try {
+      console.log('Sender', senderData);
+      console.log('Recipient', recipientData);
+      const senderPayload = {
+        CitySender: senderData.City,
+        SenderAddress: senderData.Warehouse,
+        Sender: '',
+        ContactSender: '',
+        SendersPhone: senderData.Phone,
+      };
+      const recipientPayload = {
+        CityRecipient: recipientData.City,
+        RecipientAddress: recipientData.Warehouse,
+        ContactRecipient: '',
+        RecipientsPhone: recipientData.Phone,
+        Recipient: '',
+        FirstName: recipientData.FirstName,
+        LastName: recipientData.LastName,
+        MiddleName: recipientData.MiddleName,
+      };
       const waybillRef = await NovaPoshtaServices.createWaybill(
-        senderData,
-        recipientData,
-        cargoData,
+        senderPayload,
+        recipientPayload,
+        {
+          ...cargoData,
+          ServiceType: 'WarehouseWarehouse',
+          SeatsAmount: 1,
+        },
         payerType,
         paymentMethod
       );
+      console.log('Waybill Ref:', waybillRef);
 
       set(state => ({
         order: state.order
