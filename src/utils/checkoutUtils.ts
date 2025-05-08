@@ -1,7 +1,6 @@
 import { CartItem, Order, OrderStatus } from '../types/checkout';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-import { useCartStore } from '@/store/cartStore';
 import { NovaPoshtaServices } from '@/services/novaPoshtaService';
 
 export const calculateTotal = (cartItems: CartItem[]): number => {
@@ -21,6 +20,8 @@ export const createOrder = async (
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
+    localStorage.removeItem('cart');
+
     await supabase.auth.signInAnonymously();
     ({
       data: { user },

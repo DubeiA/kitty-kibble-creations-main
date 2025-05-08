@@ -18,7 +18,7 @@ const Checkout = () => {
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<Partial<CheckoutFormValues>>({});
   const { toast } = useToast();
-  const { items } = useCartStore();
+  const { items, total } = useCartStore();
 
   useEffect(() => {
     // Check if user is logged in
@@ -125,11 +125,7 @@ const Checkout = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-display font-bold mb-8">
-            Оформлення замовлення
-          </h1>
-
+        <div className="max-w-[70rem] mx-auto">
           {orderError && (
             <Alert variant="destructive" className="mb-6">
               <AlertDescription>{orderError}</AlertDescription>
@@ -139,6 +135,8 @@ const Checkout = () => {
             onSubmit={handleSubmit}
             isProcessing={isProcessing}
             defaultValues={userData}
+            cartItems={items}
+            total={total}
           />
         </div>
       </main>

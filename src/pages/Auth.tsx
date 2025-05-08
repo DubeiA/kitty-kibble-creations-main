@@ -220,6 +220,8 @@ const Auth = () => {
   };
 
   const signInWithGoogle = async () => {
+    localStorage.removeItem('cart');
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

@@ -28,6 +28,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
 import { createOrder } from '@/utils/checkoutUtils';
+import { CheckoutItemsList } from './CheckoutItemsList';
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -55,12 +56,16 @@ interface CheckoutFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => void;
   isProcessing?: boolean;
   defaultValues?: Partial<z.infer<typeof formSchema>>;
+  cartItems: any[];
+  total: number;
 }
 
 export function CheckoutForm({
   onSubmit,
   isProcessing = false,
   defaultValues,
+  cartItems,
+  total,
 }: CheckoutFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -79,8 +84,7 @@ export function CheckoutForm({
   });
 
   const setShipping = useOrderStore(state => state.setShipping);
-  const { items, total, removeFromCart, updateQuantity, clearCart } =
-    useCartStore();
+  const { items, removeFromCart, updateQuantity, clearCart } = useCartStore();
   const shipping = useOrderStore(state => state.shipping);
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
@@ -347,103 +351,15 @@ export function CheckoutForm({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 py-8 px-2 md:px-0">
-      <div className="space-y-8">
-        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-          <h2 className="text-2xl font-bold mb-6 text-primary-foreground text-center md:text-left">
-            Ваше замовлення
-          </h2>
-          {items.length === 0 ? (
-            <div className="text-center py-8 text-lg text-gray-500">
-              Кошик порожній
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {items.map(item => (
-                <div
-                  key={item.id}
-                  className="flex flex-col p-2 sm:p-3 border rounded-lg bg-neutral-50 hover:shadow-md transition min-h-[110px]"
-                >
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-14 h-14 object-cover rounded border"
-                    />
-                    <div className="flex flex-col items-start w-full">
-                      <h3 className="font-semibold text-base">{item.name}</h3>
-                      <p className="text-xs text-gray-500">
-                        Ціна: {formatPrice(item.price)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            handleUpdateQuantity(item.id, item.quantity - 1)
-                          }
-                          className="h-7 w-7"
-                        >
-                          -
-                        </Button>
-                        <span className="font-semibold text-base w-6 text-center">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            handleUpdateQuantity(item.id, item.quantity + 1)
-                          }
-                          className="h-7 w-7"
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center w-full mt-2">
-                    <p className="font-semibold text-base text-primary-foreground">
-                      {formatPrice(item.price * item.quantity)}
-                    </p>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => handleRemoveFromCart(item.id)}
-                      className="h-7 w-7"
-                      title="Видалити"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <div className="mt-6 space-y-2 border-t pt-4">
-                <div className="flex justify-between text-base">
-                  <span>Сума:</span>
-                  <span>{formatPrice(total)}</span>
-                </div>
-                {shipping && shipping.cost > 0 && (
-                  <>
-                    <div className="flex justify-between text-base">
-                      <span>Доставка:</span>
-                      <span>{formatPrice(shipping.cost)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xl text-primary mt-2">
-                      <span>Разом:</span>
-                      <span>{formatPrice(total + shipping.cost)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+    <div className="flex flex-col md:flex-row gap-8 max-w-[70rem] mx-auto">
+      <div className="w-full md:w-1/3">
+        <CheckoutItemsList
+          items={items}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveFromCart={handleRemoveFromCart}
+        />
       </div>
-      <div>
+      <div className="w-full md:w-1/2">
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
           <h2 className="text-2xl font-bold mb-6 text-primary-foreground text-center md:text-left">
             Оформлення замовлення
