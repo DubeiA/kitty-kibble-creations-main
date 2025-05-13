@@ -57,7 +57,6 @@ export const useOrderStore = create<OrderState>(set => ({
   calculateShippingCost: async (citySender, cityRecipient, weight, cost) => {
     set({ loading: true, error: null });
     try {
-      console.log('Sender');
       const shippingCost = await NovaPoshtaServices.calculateShippingCost(
         citySender,
         cityRecipient,
@@ -93,8 +92,6 @@ export const useOrderStore = create<OrderState>(set => ({
   ) => {
     set({ loading: true, error: null });
     try {
-      console.log('Sender', senderData);
-      console.log('Recipient', recipientData);
       const senderPayload = {
         CitySender: senderData.City,
         SenderAddress: senderData.Warehouse,
@@ -123,7 +120,6 @@ export const useOrderStore = create<OrderState>(set => ({
         payerType,
         paymentMethod
       );
-      console.log('Waybill Ref:', waybillRef);
 
       set(state => ({
         order: state.order

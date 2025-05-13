@@ -5,12 +5,7 @@ import { Menu, X, ShoppingCart } from 'lucide-react';
 import AuthButtons from './AuthButtons';
 import { useCurrentUser } from '@/hooks/currentUser';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
-
-// Get cart from localStorage
-const getCartFromStorage = () => {
-  const savedCart = localStorage.getItem('cart');
-  return savedCart ? JSON.parse(savedCart) : [];
-};
+import { useCartStore } from '@/store/cartStore';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,35 +13,15 @@ const Header = () => {
   const location = useLocation();
   const isShopPage = location.pathname === '/shop';
   const { user } = useCurrentUser();
+  const items = useCartStore(state => state.items);
 
   const scrollToSection = useScrollToSection();
 
-  // Update cart count when component mounts and when location changes
+  // Update cart count when items change
   useEffect(() => {
-    const updateCartCount = () => {
-      const cartItems = getCartFromStorage();
-      const itemCount = cartItems.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
-      setCartItemsCount(itemCount);
-    };
-
-    // Initial update
-    updateCartCount();
-
-    // Setup event listener for storage changes
-    window.addEventListener('storage', updateCartCount);
-
-    // Custom event for cart updates
-    const handleCartUpdate = () => updateCartCount();
-    window.addEventListener('cartUpdated', handleCartUpdate);
-
-    return () => {
-      window.removeEventListener('storage', updateCartCount);
-      window.removeEventListener('cartUpdated', handleCartUpdate);
-    };
-  }, [location]);
+    const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+    setCartItemsCount(itemCount);
+  }, [items]);
 
   // Scroll to top when navigating
   useEffect(() => {

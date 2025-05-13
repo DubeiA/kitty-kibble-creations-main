@@ -68,6 +68,13 @@ const OrderCard = ({ order }: { order: Order }) => {
     }
   };
 
+  const formatWeight = (weight: number): string => {
+    if (weight >= 1000) {
+      return `${weight / 1000} кг`;
+    }
+    return `${weight} г`;
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="bg-muted p-4">
@@ -135,6 +142,9 @@ const OrderCard = ({ order }: { order: Order }) => {
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} x {item.price_at_time} грн
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Вага: {formatWeight(item.selected_weight)}
                         </p>
                       </div>
                     </div>

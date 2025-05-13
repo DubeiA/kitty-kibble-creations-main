@@ -4,6 +4,7 @@ export type CartItem = {
   price: number;
   quantity: number;
   image_url?: string;
+  selectedWeight: number;
 };
 
 export type CheckoutFormData = {
@@ -46,6 +47,7 @@ export type OrderItem = {
   price_at_time: number;
   total_price: number;
   image_url?: string;
+  selected_weight: number;
 };
 
 export type Customer = {

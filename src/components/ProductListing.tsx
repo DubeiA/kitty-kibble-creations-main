@@ -143,6 +143,9 @@ const ProductListing = ({ products, page, limit }: ProductListingProps) => {
       price: product.price,
       quantity: 1,
       image: imageUrl,
+      selectedWeight: product.base_weight || product.weights?.[0] || 0,
+      category: product.animal_type,
+      type: product.category,
     });
     // Show success toast
     toast({

@@ -1,18 +1,13 @@
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
 
-interface CheckoutItemsListProps {
-  items: any[];
-  onUpdateQuantity: (id: string, quantity: number) => void;
-  onRemoveFromCart: (id: string) => void;
-}
+export const CheckoutItemsList = () => {
+  const items = useCartStore(state => state.items);
+  const updateQuantity = useCartStore(state => state.updateQuantity);
+  const removeFromCart = useCartStore(state => state.removeFromCart);
 
-export const CheckoutItemsList = ({
-  items = [],
-  onUpdateQuantity,
-  onRemoveFromCart,
-}: CheckoutItemsListProps) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
       <h2 className="text-2xl font-bold mb-6 text-primary-foreground text-center md:text-left">
@@ -26,7 +21,7 @@ export const CheckoutItemsList = ({
         <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
           {items.map(item => (
             <div
-              key={item.id}
+              key={`${item.id}-${item.selectedWeight}`}
               className="flex flex-col p-4 border rounded-lg bg-neutral-50 hover:shadow-md transition min-h-[120px]"
             >
               <div className="flex items-center space-x-4">
@@ -46,7 +41,11 @@ export const CheckoutItemsList = ({
                       size="icon"
                       variant="outline"
                       onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity - 1)
+                        updateQuantity(
+                          item.id,
+                          item.quantity - 1,
+                          item.selectedWeight
+                        )
                       }
                       className="h-7 w-7"
                     >
@@ -60,7 +59,11 @@ export const CheckoutItemsList = ({
                       size="icon"
                       variant="outline"
                       onClick={() =>
-                        onUpdateQuantity(item.id, item.quantity + 1)
+                        updateQuantity(
+                          item.id,
+                          item.quantity + 1,
+                          item.selectedWeight
+                        )
                       }
                       className="h-7 w-7"
                     >
@@ -77,7 +80,7 @@ export const CheckoutItemsList = ({
                   type="button"
                   size="icon"
                   variant="destructive"
-                  onClick={() => onRemoveFromCart(item.id)}
+                  onClick={() => removeFromCart(item.id, item.selectedWeight)}
                   className="h-7 w-7"
                   title="Видалити"
                 >

@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
 import { createOrder } from '@/utils/checkoutUtils';
 import { CheckoutItemsList } from './CheckoutItemsList';
+import { CartItem } from '@/types/cart';
 
 const formSchema = z.object({
   firstName: z.string().min(2, {
@@ -122,8 +123,8 @@ export function CheckoutForm({
     }
   };
 
-  const handleRemoveFromCart = (id: string) => {
-    removeFromCart(id);
+  const handleRemoveFromCart = (id: string, selectedWeight: number) => {
+    removeFromCart(id, selectedWeight);
     toast({
       title: 'Товар видалено',
       description: 'Товар було видалено з кошика',
@@ -133,6 +134,13 @@ export function CheckoutForm({
   const handleUpdateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
     updateQuantity(id, newQuantity);
+  };
+
+  const calculateTotalWeight = (items: CartItem[]) => {
+    return items.reduce((total, item) => {
+      // Вага товару * кількість + вага упаковки (100г на товар)
+      return total + item.selectedWeight * item.quantity + item.quantity * 100;
+    }, 0);
   };
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -175,13 +183,6 @@ export function CheckoutForm({
       }
       const senderWarehouseRef = senderWarehousesResponse.data[0].Ref;
 
-      // 4. Створюємо отримувача
-      console.log('Форма передає дані:', {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        middleName: values.middleName,
-      });
-
       const recipientResponse = await NovaPoshtaServices.saveCounterparty({
         CounterpartyType: 'PrivatePerson',
         CounterpartyProperty: 'Recipient',
@@ -191,13 +192,6 @@ export function CheckoutForm({
         MiddleName: values.middleName,
         Phone: values.phone,
       });
-
-      console.log('Recipient response:', recipientResponse);
-
-      console.log(
-        'Відповідь від API при створенні отримувача:',
-        recipientResponse
-      );
 
       if (
         !recipientResponse.success ||
@@ -252,32 +246,31 @@ export function CheckoutForm({
         ContactRecipient: contactRecipientRef,
       };
 
-      console.log('Дані для створення накладної:', {
-        recipientData,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        middleName: values.middleName,
-      });
-
       const seatsAmount = 1;
-      const totalWeight = items.reduce(
-        (acc, item) => acc + item.quantity * 0.5,
-        0.5
-      );
+      const totalWeight = calculateTotalWeight(items);
+      // --- Формуємо короткий опис для Нової Пошти ---
+      const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+      let fullDescription = items
+        .map(item => `${item.name} (${item.selectedWeight}g) x${item.quantity}`)
+        .join(', ');
+      let description =
+        fullDescription.length > 100
+          ? `Корм для тварин, ${totalCount} шт`
+          : fullDescription;
+      description = description.slice(0, 40);
+
       const cargoData = {
-        Weight: totalWeight,
+        Weight: totalWeight / 1000, // конвертуємо в кілограми
         ServiceType: 'WarehouseWarehouse' as const,
         SeatsAmount: seatsAmount,
-        Description: items
-          .map(item => `${item.name} x${item.quantity}`)
-          .join(', '),
+        Description: description,
         OptionsSeat: [
           {
-            volumetricVolume: 0.1, // мінімальний об'єм
+            volumetricVolume: 0.1,
             volumetricWidth: 10,
             volumetricLength: 10,
             volumetricHeight: 10,
-            weight: totalWeight,
+            weight: totalWeight / 1000,
           },
         ],
       };
@@ -351,164 +344,165 @@ export function CheckoutForm({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 max-w-[70rem] mx-auto">
-      <div className="w-full md:w-1/3">
-        <CheckoutItemsList
-          items={items}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveFromCart={handleRemoveFromCart}
-        />
-      </div>
-      <div className="w-full md:w-1/2">
-        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-          <h2 className="text-2xl font-bold mb-6 text-primary-foreground text-center md:text-left">
-            Оформлення замовлення
-          </h2>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-8"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ім'я</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введіть ваше ім'я" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Прізвище</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введіть ваше прізвище" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="middleName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>По батькові</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Введіть ваше по батькові"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Телефон</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+380XXXXXXXXX" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="your@email.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="space-y-4">
-                <FormLabel>Доставка</FormLabel>
-                <NovaPoshtaSelector onSelect={handleNovaPoshtaSelect} />
-              </div>
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="payerType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Хто оплачує доставку</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Виберіть хто оплачує" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Sender">Відправник</SelectItem>
-                          <SelectItem value="Recipient">Отримувач</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Спосіб оплати</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Виберіть спосіб оплати" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Cash">Готівка</SelectItem>
-                          <SelectItem value="NonCash">Безготівка</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full h-12 text-lg font-bold bg-kitty-pink hover:bg-pink-400 transition"
-                disabled={isProcessing}
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="w-full md:w-1/2">
+          <CheckoutItemsList />
+        </div>
+        <div className="w-full md:w-1/2">
+          <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+            <h2 className="text-2xl font-bold mb-6 text-primary-foreground text-center md:text-left">
+              Оформлення замовлення
+            </h2>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(handleSubmit)}
+                className="space-y-8"
               >
-                {isProcessing ? (
-                  <>
-                    <PawPrint className="mr-2 h-5 w-5 animate-spin" />
-                    Обробка...
-                  </>
-                ) : (
-                  'Оформити замовлення'
-                )}
-              </Button>
-            </form>
-          </Form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ім'я</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Введіть ваше ім'я" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Прізвище</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Введіть ваше прізвище"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="middleName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>По батькові</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Введіть ваше по батькові"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Телефон</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+380XXXXXXXXX" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your@email.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <FormLabel>Доставка</FormLabel>
+                  <NovaPoshtaSelector onSelect={handleNovaPoshtaSelect} />
+                </div>
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="payerType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Хто оплачує доставку</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Виберіть хто оплачує" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Sender">Відправник</SelectItem>
+                            <SelectItem value="Recipient">Отримувач</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Спосіб оплати</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Виберіть спосіб оплати" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Cash">Готівка</SelectItem>
+                            <SelectItem value="NonCash">Безготівка</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-lg font-bold bg-kitty-pink hover:bg-pink-400 transition"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <PawPrint className="mr-2 h-5 w-5 animate-spin" />
+                      Обробка...
+                    </>
+                  ) : (
+                    'Оформити замовлення'
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </div>
         </div>
       </div>
     </div>

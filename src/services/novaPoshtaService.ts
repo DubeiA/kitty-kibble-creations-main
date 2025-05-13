@@ -224,8 +224,6 @@ export class NovaPoshtaServices {
     payerType: 'Sender' | 'Recipient',
     paymentMethod: 'Cash' | 'NonCash'
   ): Promise<string> {
-    console.log('Creating waybill with recipient data:', recipientData);
-
     const response = await this.makeRequest('InternetDocument', 'save', {
       Sender: senderData.Sender,
       CitySender: senderData.CitySender,
@@ -249,8 +247,6 @@ export class NovaPoshtaServices {
       PaymentMethod: paymentMethod,
       DateTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
     });
-
-    console.log('Waybill creation response:', response);
 
     if (!response.success || !response.data || !response.data[0]) {
       throw new Error(

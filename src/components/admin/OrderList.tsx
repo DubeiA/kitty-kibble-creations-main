@@ -34,6 +34,13 @@ interface OrderListProps {
   handleDeleteOrder: (orderId: string) => void;
 }
 
+const formatWeight = (weight: number): string => {
+  if (weight >= 1000) {
+    return `${weight / 1000} кг`;
+  }
+  return `${weight} г`;
+};
+
 export function OrderList({
   orders,
   loading,
@@ -138,6 +145,7 @@ export function OrderList({
                   <TableRow>
                     <TableHead>Назва</TableHead>
                     <TableHead>Кількість</TableHead>
+                    <TableHead>Вага</TableHead>
                     <TableHead>Ціна</TableHead>
                     <TableHead>Підсумок</TableHead>
                   </TableRow>
@@ -148,6 +156,9 @@ export function OrderList({
                       <TableRow key={item.id}>
                         <TableCell>{item.product_name}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
+                        <TableCell>
+                          {formatWeight(item.selected_weight)}
+                        </TableCell>
                         <TableCell>
                           {item.price_at_time.toFixed(2)} грн
                         </TableCell>

@@ -1,4 +1,5 @@
-import { CartItem, Order, OrderStatus } from '../types/checkout';
+import { CartItem } from '../types/cart';
+import { Order, OrderStatus } from '../types/checkout';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { NovaPoshtaServices } from '@/services/novaPoshtaService';
@@ -79,6 +80,7 @@ export const createOrder = async (
       product_id: item.id,
       quantity: item.quantity,
       price_at_time: Number(item.price.toFixed(2)),
+      selected_weight: item.selectedWeight,
     }));
 
     // Create order items in the database
